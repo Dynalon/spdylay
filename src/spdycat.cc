@@ -187,7 +187,11 @@ struct SpdySession {
   }
   bool all_requests_processed() const
   {
-    return complete == reqvec.size();
+    bool all_req_complete = complete == reqvec.size();
+    // TODO check if outstanding server-push exists
+    if (true) {
+    	return false;
+    }
   }
   void update_hostport()
   {
@@ -267,6 +271,7 @@ void on_data_chunk_recv_callback
 (spdylay_session *session, uint8_t flags, int32_t stream_id,
  const uint8_t *data, size_t len, void *user_data)
 {
+	std::cout << "DATA CHUNK RECEIVED, STREAMID: " << stream_id << std::endl;
   SpdySession *spdySession = get_session(user_data);
   std::map<int32_t, Request*>::iterator itr =
     spdySession->streams.find(stream_id);
@@ -368,22 +373,29 @@ void on_ctrl_recv_callback2
 (spdylay_session *session, spdylay_frame_type type, spdylay_frame *frame,
  void *user_data)
 {
+	std::cout << "on_ctrl_recv_callback2 fired, frame type : " << type << std::endl;
   if(type == SPDYLAY_SYN_REPLY) {
     Request *req = (Request*)spdylay_session_get_stream_user_data
       (session, frame->syn_reply.stream_id);
     assert(req);
     req->record_syn_reply_time();
+  } else if (type == SPDYLAY_SYN_STREAM) {
+	  std::cout << "RECEIVED ASSOCIATED CONTENT" << std::endl;
+	  // associated content stream
+	  // TODO put the content into the internal client cache
   }
   check_response_header(session, type, frame, user_data);
   if(config.verbose) {
     on_ctrl_recv_callback(session, type, frame, user_data);
   }
+
 }
 
 void on_stream_close_callback
 (spdylay_session *session, int32_t stream_id, spdylay_status_code status_code,
  void *user_data)
 {
+	std::cout << "closing stream id=" << stream_id << std::endl;
   SpdySession *spdySession = get_session(user_data);
   std::map<int32_t, Request*>::iterator itr =
     spdySession->streams.find(stream_id);
@@ -526,7 +538,7 @@ int communicate(const std::string& host, uint16_t port,
 
   bool ok = true;
   timeval tv1, tv2;
-  while(!sc.finish()) {
+  while(!sc.finish() && true) {
     if(config.timeout != -1) {
       gettimeofday(&tv1, 0);
     }

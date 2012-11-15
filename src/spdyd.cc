@@ -153,6 +153,11 @@ int main(int argc, char **argv)
   config.port = strtol(argv[optind++], 0, 10);
   config.private_key_file = argv[optind++];
   config.cert_file = argv[optind++];
+
+  // set the callback that is triggered when the peers request is fully received
+  // this means, when the last frame (carring the FLAG_FIN flag set) is received
+  // this corresponds to a HTTP request, where we received all data (header and
+  // body) from the client.
   config.on_request_recv_callback = htdocs_on_request_recv_callback;
   ssl_debug = config.verbose;
 

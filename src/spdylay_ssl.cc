@@ -407,6 +407,7 @@ ssize_t send_callback(spdylay_session *session,
 ssize_t recv_callback(spdylay_session *session,
                       uint8_t *data, size_t len, int flags, void *user_data)
 {
+	std::cout << "RECV CALLBACK FIRED" << std::endl;
   Spdylay *sc = (Spdylay*)user_data;
   ssize_t r = sc->recv_data(data, len, flags);
   if(r < 0) {

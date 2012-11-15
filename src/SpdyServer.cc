@@ -67,7 +67,9 @@ Config::Config(): verbose(false), daemon(false), port(0), data_ptr(0),
 Request::Request(int32_t stream_id)
   : stream_id(stream_id),
     file(-1)
-{}
+{
+
+}
 
 Request::~Request()
 {
@@ -296,7 +298,48 @@ int SpdyEventHandler::submit_file_response(const std::string& status,
     nv[12] = "last-modified";
     nv[13] = last_modified_str.c_str();
   }
-  return spdylay_submit_response(session_, stream_id, nv, data_prd);
+  // this line does something that prevent the associated content to be send/received
+  int rv = spdylay_submit_response(session_, stream_id, nv, data_prd);
+  return rv;
+	}
+
+int SpdyEventHandler::submit_associated_content(int32_t assoc_stream_id,
+		                                        time_t last_modified,
+		                                        off_t file_length,
+		                                        spdylay_data_provider *data_prd)
+{
+	  std::string date_str = util::http_date(time(0));
+	  std::string content_length = util::to_str(file_length);
+	  std::string last_modified_str;
+	  const char *nv[] = {
+	    ":status", "200 OK",
+	    ":version", "HTTP/1.1",
+	    "server", SPDYD_SERVER.c_str(),
+	    "content-length", content_length.c_str(),
+	    "cache-control", "max-age=3600",
+	    "date", date_str.c_str(),
+	    0, 0,
+	    0
+	  };
+	  if(last_modified != 0) {
+	    last_modified_str = util::http_date(last_modified);
+	    nv[12] = "last-modified";
+	    nv[13] = last_modified_str.c_str();
+	  }
+	  std::cout << " ASSOC STREAM ID: " << assoc_stream_id;
+	  // TODO implement spdylay_submit_associated_content () in the spdylay lib
+	  // for now we do it ourselves:
+
+	  // the spec requires associated content to be transmitted over unidirectional streams
+	  uint8_t flags = SPDYLAY_CTRL_FLAG_UNIDIRECTIONAL;
+	  uint8_t prio = spdylay_session_get_pri_lowest (session_);
+
+	  int rv = spdylay_submit_syn_stream(session_, flags, assoc_stream_id, prio, nv, NULL);
+	  if (rv != 0) {
+		  std::cerr << "ERROR submiting associated syn stream: " << rv << std::endl;
+		  return rv;
+	  }
+	  return 0;
 }
 
 int SpdyEventHandler::submit_response
@@ -306,7 +349,7 @@ int SpdyEventHandler::submit_response
  spdylay_data_provider *data_prd)
 {
   std::string date_str = util::http_date(time(0));
-  const char **nv = new const char*[8+headers.size()*2+1];
+  const char **nv = new const char*[8+headers.size()*	2+1];
   nv[0] = ":status";
   nv[1] = status.c_str();
   nv[2] = ":version";
@@ -472,6 +515,8 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
   bool host_found = false;
   time_t last_mod = 0;
   bool last_mod_found = false;
+
+  // iterate of all received headers
   for(int i = 0; i < (int)req->headers.size(); ++i) {
     const std::string &field = req->headers[i].first;
     const std::string &value = req->headers[i].second;
@@ -505,34 +550,66 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
     }
     url = url.substr(0, query_pos);
   }
+  // check the url for sanity
   url = util::percentDecode(url.begin(), url.end());
   if(!check_url(url)) {
     prepare_status_response(req, hd, STATUS_404);
     return;
   }
+  // concatenate the request path without htdocs path
+  // and open up the file
   std::string path = hd->config()->htdocs+url;
   if(path[path.size()-1] == '/') {
     path += DEFAULT_HTML;
   }
+  int assoc_stream_id;
   int file = open(path.c_str(), O_RDONLY | O_BINARY);
   if(file == -1) {
     prepare_status_response(req, hd, STATUS_404);
   } else {
     struct stat buf;
+
     if(fstat(file, &buf) == -1) {
       close(file);
       prepare_status_response(req, hd, STATUS_404);
     } else {
+    // file found, read it in
       req->file = file;
+      // TODO if this file has associated content, save date for the stream
+      // (the request object will be destroyed right after the response stream is closed)
+      assoc_stream_id = req->stream_id;
+
       spdylay_data_provider data_prd;
       data_prd.source.fd = file;
       data_prd.read_callback = file_read_callback;
+      // if we have a last modified date tell the client
       if(last_mod_found && buf.st_mtime <= last_mod) {
         prepare_status_response(req, hd, STATUS_304);
       } else {
-        hd->submit_file_response(STATUS_200, req->stream_id, buf.st_mtime,
+       hd->submit_file_response(STATUS_200, req->stream_id, buf.st_mtime,
                                  buf.st_size, &data_prd);
       }
+      // TODO
+      // get dependencies of the file serve
+      // for each dependency
+      // create new streams for that file and send it
+
+      // for testing, we just submit that file twice
+      std::cout << "sending associated content!" << std::endl;
+      hd->submit_associated_content(assoc_stream_id, 0, 0, NULL);
+return;
+
+      spdylay_data_provider data_prd_2;
+      int file_2 = open (path.c_str (), O_RDONLY | O_BINARY);
+      if (file_2 == -1) {
+    	  std::cout << "ERROR: could not open the 2nd file" << std::endl;
+    	  close (file_2);
+    	  return;
+      }
+
+      data_prd_2.source.fd = file_2;
+      data_prd_2.read_callback = file_read_callback;
+      hd->submit_file_response(STATUS_200, req->stream_id, buf.st_mtime, buf.st_size, &data_prd_2);
     }
   }
 }
@@ -577,6 +654,9 @@ void hd_on_ctrl_recv_callback
 }
 } // namespace
 
+// whenever we receive a request from the client, retrieve
+// the corresponding request for that given stream ID, and
+// prepare the response
 void htdocs_on_request_recv_callback
 (spdylay_session *session, int32_t stream_id, void *user_data)
 {
@@ -639,7 +719,7 @@ void on_stream_close_callback
  void *user_data)
 {
   SpdyEventHandler *hd = (SpdyEventHandler*)user_data;
-  hd->remove_stream(stream_id);
+  //hd->remove_stream(stream_id);
   if(hd->config()->verbose) {
     print_session_id(hd->session_id());
     print_timer();

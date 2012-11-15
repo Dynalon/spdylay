@@ -1235,7 +1235,9 @@ spdylay_outbound_item* spdylay_session_pop_next_ob_item
       spdylay_outbound_item *item, *syn_stream_item;
       item = spdylay_pq_top(&session->ob_pq);
       syn_stream_item = spdylay_pq_top(&session->ob_ss_pq);
-      if(spdylay_session_is_outgoing_concurrent_streams_max(session) ||
+      int max_outgoing_streams = spdylay_session_is_outgoing_concurrent_streams_max (session);
+      printf("max outgoing streams: %d\n", max_outgoing_streams);
+      if(max_outgoing_streams ||
          item->pri < syn_stream_item->pri ||
          (item->pri == syn_stream_item->pri &&
           item->seq < syn_stream_item->seq)) {
@@ -1558,6 +1560,11 @@ int spdylay_session_send(spdylay_session *session)
       }
     }
   }
+  // assertion: since ALL frame have to be send out, the queues must be empty at this time
+  printf("ASSERTIONS\n");
+  assert (session->ob_pq.length == 0);
+  assert (session->ob_ss_pq.length == 0);
+  assert (0);
   return 0;
 }
 
