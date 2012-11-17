@@ -300,6 +300,11 @@ void on_data_chunk_recv_callback
       }
       update_html_parser(spdySession, req, data, len, 0);
     }
+  } else {
+	  // associated content
+      if(!config.null_out) {
+        std::cout.write(reinterpret_cast<const char*>(data), len);
+      }
   }
 }
 
