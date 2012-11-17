@@ -301,6 +301,7 @@ int spdylay_submit_response(spdylay_session *session,
     return SPDYLAY_ERR_NOMEM;
   }
   if(data_prd_copy == NULL) {
+	  // TODO check if associated content for this stream is pending
     flags |= SPDYLAY_CTRL_FLAG_FIN;
   }
   spdylay_frame_syn_reply_init(&frame->syn_reply, session->version, flags,

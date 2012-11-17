@@ -67,6 +67,7 @@ spdycat_SOURCES = ${HELPER_OBJECTS} ${HELPER_HFILES} spdycat.cc \
 spdyd_SOURCES = ${HELPER_OBJECTS} ${HELPER_HFILES} \
 	${EVENT_OBJECTS} ${EVENT_HFILES} \
 	${SPDY_SERVER_OBJECTS} ${SPDY_SERVER_HFILES} \
+	AssocContent.h AssocContent.cc \
 	spdyd.cc
 
 if HAVE_LIBEVENT_OPENSSL

@@ -271,7 +271,6 @@ void on_data_chunk_recv_callback
 (spdylay_session *session, uint8_t flags, int32_t stream_id,
  const uint8_t *data, size_t len, void *user_data)
 {
-	std::cout << "DATA CHUNK RECEIVED, STREAMID: " << stream_id << std::endl;
   SpdySession *spdySession = get_session(user_data);
   std::map<int32_t, Request*>::iterator itr =
     spdySession->streams.find(stream_id);
@@ -373,7 +372,6 @@ void on_ctrl_recv_callback2
 (spdylay_session *session, spdylay_frame_type type, spdylay_frame *frame,
  void *user_data)
 {
-	std::cout << "on_ctrl_recv_callback2 fired, frame type : " << type << std::endl;
   if(type == SPDYLAY_SYN_REPLY) {
     Request *req = (Request*)spdylay_session_get_stream_user_data
       (session, frame->syn_reply.stream_id);
@@ -395,7 +393,6 @@ void on_stream_close_callback
 (spdylay_session *session, int32_t stream_id, spdylay_status_code status_code,
  void *user_data)
 {
-	std::cout << "closing stream id=" << stream_id << std::endl;
   SpdySession *spdySession = get_session(user_data);
   std::map<int32_t, Request*>::iterator itr =
     spdySession->streams.find(stream_id);

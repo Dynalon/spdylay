@@ -40,6 +40,8 @@
 
 #include <spdylay/spdylay.h>
 
+#include "AssocContent.h"
+
 namespace spdylay {
 
 struct Config {
@@ -149,7 +151,6 @@ private:
   int64_t session_id_;
   bool want_write_;
 
-  // maps the
   std::map<int32_t, Request*> id2req_;
 };
 

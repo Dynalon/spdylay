@@ -43,6 +43,7 @@
 #include "uri.h"
 #include "util.h"
 #include "EventPoll.h"
+#include "AssocContent.h"
 
 #ifndef O_BINARY
 # define O_BINARY (0)
@@ -298,7 +299,6 @@ int SpdyEventHandler::submit_file_response(const std::string& status,
     nv[12] = "last-modified";
     nv[13] = last_modified_str.c_str();
   }
-  // this line does something that prevent the associated content to be send/received
   int rv = spdylay_submit_response(session_, stream_id, nv, data_prd);
   return rv;
 	}
@@ -589,14 +589,25 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
        hd->submit_file_response(STATUS_200, req->stream_id, buf.st_mtime,
                                  buf.st_size, &data_prd);
       }
-      // TODO
-      // get dependencies of the file serve
-      // for each dependency
-      // create new streams for that file and send it
+      // send associated content
+      if (AssociatedContent::HasContent (url)) {
 
-      // for testing, we just submit that file twice
-      std::cout << "sending associated content!" << std::endl;
-      hd->submit_associated_content(assoc_stream_id, 0, 0, NULL);
+          // for each dependency
+    	  vector<string> content = AssociatedContent::GetAssociatedContent(url);
+    	  vector<string>::iterator it;
+
+    	  for (it = content.begin(); it != content.end(); it++) {
+    		  //hd->submit_associated_content(assoc_stream_id, 0, 0, NULL);
+    		  string assoc_url = *it;
+    		  cout << "sending associated content: " << assoc_url << endl;
+    	  }
+          // create new streams for that file and send it
+
+          // for testing, we just submit that file twice
+
+
+      }
+
 return;
 
       spdylay_data_provider data_prd_2;
@@ -922,6 +933,11 @@ SpdyServer::SpdyServer(const Config *config)
   : config_(config)
 {
   memset(sfd_, -1, sizeof(sfd_));
+  if (config->verbose) {
+	  std::cout << "Filling the associated content map" << std::endl;
+  }
+  AssociatedContent::Fill ();
+  AssociatedContent::verbose = config->verbose;
 }
 
 SpdyServer::~SpdyServer()
