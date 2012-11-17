@@ -1236,12 +1236,14 @@ static int spdylay_session_after_frame_sent(spdylay_session *session) {
 					// do not send the FLAG_FIN if we have associated content
 					// for that stream
 					int flags;
-					if (1) {
-						printf("preventing closing of stream id=%d as we have associated content", stream->stream_id);
+					// HACK we hardcore the stream id to 1, we should do a lookup
+					// if this stream has associated content
+					if (frame->syn_stream.stream_id == 1) {
+						printf("preventing closing of stream id=%d as we have associated content\n", stream->stream_id);
 						flags = 0;
 					}
 					else {
-						printf ("no associated content for stream id=%d, closing stream", stream->stream_id);
+						printf ("no associated content for stream id=%d, closing stream\n", stream->stream_id);
 						flags = SPDYLAY_DATA_FLAG_FIN;
 					}
 

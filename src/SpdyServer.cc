@@ -44,6 +44,11 @@
 #include "util.h"
 #include "EventPoll.h"
 #include "AssocContent.h"
+#include "spdylay/spdylay.h"
+
+// TODO ugly: this is not part of the public api
+#include "spdylay_submit.h"
+
 
 #ifndef O_BINARY
 # define O_BINARY (0)
@@ -303,10 +308,10 @@ int SpdyEventHandler::submit_file_response(const std::string& status,
   return rv;
 	}
 
-int SpdyEventHandler::submit_associated_content(int32_t assoc_stream_id,
+int SpdyEventHandler::submit_associated_content_syn(int32_t assoc_stream_id,
 		                                        time_t last_modified,
-		                                        off_t file_length,
-		                                        spdylay_data_provider *data_prd)
+		                                        off_t file_length)
+
 {
 	  std::string date_str = util::http_date(time(0));
 	  std::string content_length = util::to_str(file_length);
@@ -341,6 +346,13 @@ int SpdyEventHandler::submit_associated_content(int32_t assoc_stream_id,
 	  }
 	  return 0;
 }
+
+int SpdyEventHandler::submit_associated_content (int32_t stream_id, int32_t assoc_stream_id,
+												 off_t file_length, spdylay_data_provider *data_prd)
+{
+	return 0;
+}
+
 
 int SpdyEventHandler::submit_response
 (const std::string& status,
@@ -586,10 +598,12 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
       if(last_mod_found && buf.st_mtime <= last_mod) {
         prepare_status_response(req, hd, STATUS_304);
       } else {
+
        hd->submit_file_response(STATUS_200, req->stream_id, buf.st_mtime,
                                  buf.st_size, &data_prd);
       }
       // send associated content
+
       if (AssociatedContent::HasContent (url)) {
 
           // for each dependency
@@ -597,9 +611,59 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
     	  vector<string>::iterator it;
 
     	  for (it = content.begin(); it != content.end(); it++) {
-    		  //hd->submit_associated_content(assoc_stream_id, 0, 0, NULL);
     		  string assoc_url = *it;
+
+    		  string assoc_path = hd->config()->htdocs + assoc_url;
+
+    		  int assoc_file = open(assoc_path.c_str(), O_RDONLY | O_BINARY);
+    		  if(assoc_file == -1) {
+    			  cerr << "could not open file " << assoc_path.c_str () << endl;
+    			  // TODO
+    			  return;
+    		  }
+    		  struct stat assoc_buf;
+    		  if(fstat(assoc_file, &assoc_buf) == -1) {
+    		   	close(file);
+    		   	cerr << "error opening file content" << endl;
+    		     // TODO
+    		    return;
+    		  }
+    		   spdylay_data_provider assoc_data_prd;
+    		   assoc_data_prd.source.fd = assoc_file;
+    		   assoc_data_prd.read_callback = file_read_callback;
+    		   // if we have a last modified date tell the client
+    		   if(last_mod_found && assoc_buf.st_mtime <= last_mod) {
+    		    	// TODO do this earlierassoc_stream_id = req->stream_id;
+    			   cerr << "sending not modified" << endl;
+    		    	continue;
+    		   }
     		  cout << "sending associated content: " << assoc_url << endl;
+
+    		  // build nv
+    		  std::string date_str = util::http_date(time(0));
+    		  std::string content_length = util::to_str(assoc_buf.st_size);
+    		  std::string last_modified_str;
+    		  const char *nv[] = {
+    		    ":status", "200 OK",
+    		    ":version", "HTTP/1.1",
+    		    "server", SPDYD_SERVER.c_str(),
+    		    "content-length", content_length.c_str(),
+    		    "cache-control", "max-age=3600",
+    		    "date", date_str.c_str(),
+    		    0, 0,
+    		    0
+    		  };
+    		 /* if(last_modified != 0) {
+    		    last_modified_str = util::http_date(last_modified);
+    		    nv[12] = "last-modified";
+    		    nv[13] = last_modified_str.c_str()assoc_stream_id = req->stream_id;;
+    		  }
+    		  */
+
+    		  spdylay_submit_syn_stream_assoc (hd->session_, 0, 1000, assoc_stream_id, nv, &assoc_data_prd,NULL);
+    		  // send the associated content
+
+    		  // close the main stream
     	  }
           // create new streams for that file and send it
 
@@ -624,6 +688,8 @@ return;
     }
   }
 }
+
+
 } // namespace
 
 namespace {

@@ -115,6 +115,46 @@ int spdylay_submit_syn_stream(spdylay_session *session, uint8_t flags,
                                           pri, nv, NULL, stream_user_data);
 }
 
+int spdylay_submit_syn_stream_assoc(spdylay_session *session, uint8_t flags, uint32_t stream_id,
+                              int32_t assoc_stream_id,
+                              const char **nv, spdylay_data_provider *data_prd, void *stream_user_data)
+{
+	spdylay_frame *frame;
+	char **nv_copy;
+	uint8_t flags_copy = SPDYLAY_CTRL_FLAG_UNIDIRECTIONAL;
+	spdylay_data_provider *data_prd_copy = NULL;
+
+	// lowest priority so that the associated_stream has precedence
+	int8_t pri = 7;
+
+	nv_copy = spdylay_frame_nv_norm_copy(nv);
+	frame = malloc (sizeof(spdylay_frame));
+	frame->syn_stream.stream_id = stream_id;
+
+
+	if(data_prd != NULL && data_prd->read_callback != NULL) {
+	    data_prd_copy = malloc(sizeof(spdylay_data_provider));
+	    if(data_prd_copy == NULL) {
+	      return SPDYLAY_ERR_NOMEM;
+	    }
+	    *data_prd_copy = *data_prd;
+	}
+
+	spdylay_syn_stream_aux_data *aux_data = malloc(sizeof(spdylay_syn_stream_aux_data));
+
+	aux_data->data_prd = data_prd_copy;
+	aux_data->stream_user_data = stream_user_data;
+
+	spdylay_frame_syn_stream_init(&frame->syn_stream,
+	                              session->version, flags_copy,
+	                              stream_id, assoc_stream_id, pri, nv_copy);
+	spdylay_session_add_frame (session, SPDYLAY_CTRL, frame, aux_data);
+
+	return 0;
+
+
+}
+
 int spdylay_submit_syn_reply(spdylay_session *session, uint8_t flags,
                              int32_t stream_id, const char **nv)
 {

@@ -25,6 +25,7 @@ if ENABLE_SRC
 
 AM_CFLAGS = -Wall
 AM_CPPFLAGS = -Wall -I$(srcdir)/../lib/includes -I$(builddir)/../lib/includes \
+	-I$(srcdir)/../lib/ \
 	@OPENSSL_CFLAGS@ @XML_CPPFLAGS@ @LIBEVENT_OPENSSL_CFLAGS@ @DEFS@
 AM_LDFLAGS = @OPENSSL_LIBS@ @XML_LIBS@ @LIBEVENT_OPENSSL_LIBS@ -pthread
 LDADD = $(top_builddir)/lib/libspdylay.la

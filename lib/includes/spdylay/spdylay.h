@@ -1759,6 +1759,9 @@ int spdylay_submit_syn_stream(spdylay_session *session, uint8_t flags,
                               int32_t assoc_stream_id, uint8_t pri,
                               const char **nv, void *stream_user_data);
 
+int spdylay_submit_syn_stream_assoc(spdylay_session *session, uint8_t flags, uint32_t stream_id,
+                              int32_t assoc_stream_id,
+                              const char **nv, spdylay_data_provider *data_prd, void *stream_user_data);
 /**
  * @function
  *

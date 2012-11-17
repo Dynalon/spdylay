@@ -127,10 +127,10 @@ public:
                       int32_t stream_id,
                       spdylay_data_provider *data_prd);
 
-  int submit_associated_content(int32_t associated_stream_id,
-  		                                        time_t last_modified,
-  		                                        off_t file_length,
-  		                                        spdylay_data_provider *data_prd);
+  int submit_associated_content_syn(int32_t associated_stream_id,
+  		                                        time_t last_modified, off_t file_length);
+
+  int submit_associated_content(int32_t stream_id, int32_t associated_stream_id, off_t file_length, spdylay_data_provider *data_prd);
 
 
   int submit_response
@@ -143,8 +143,9 @@ public:
   void remove_stream(int32_t stream_id);
   Request* get_stream(int32_t stream_id);
   int64_t session_id() const;
-private:
   spdylay_session *session_;
+private:
+
   int fd_;
   SSL* ssl_;
   uint16_t version_;
