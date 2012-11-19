@@ -1759,9 +1759,6 @@ int spdylay_submit_syn_stream(spdylay_session *session, uint8_t flags,
                               int32_t assoc_stream_id, uint8_t pri,
                               const char **nv, void *stream_user_data);
 
-int spdylay_submit_syn_stream_assoc(spdylay_session *session, uint8_t flags, uint32_t stream_id,
-                              int32_t assoc_stream_id,
-                              const char **nv, spdylay_data_provider *data_prd, void *stream_user_data);
 /**
  * @function
  *
@@ -1849,6 +1846,14 @@ int spdylay_submit_headers(spdylay_session *session, uint8_t flags,
  */
 int spdylay_submit_data(spdylay_session *session, int32_t stream_id,
                         uint8_t flags, const spdylay_data_provider *data_prd);
+
+
+/**
+ * Push associated content to the client from a given data provider.
+ */
+int spdylay_submit_server_push(spdylay_session *session, int32_t assoc_stream_id,
+                               const char **nv, spdylay_data_provider *data_prd,
+                               void *stream_user_data);
 
 /**
  * @function
@@ -2126,6 +2131,13 @@ void spdylay_gzip_inflate_del(spdylay_gzip *inflater);
 int spdylay_gzip_inflate(spdylay_gzip *inflater,
                          uint8_t *out, size_t *outlen_ptr,
                          const uint8_t *in, size_t *inlen_ptr);
+
+/* TODO maybe this shouldn't be global? */
+int spdylay_associated_content_register (spdylay_session *session, uint32_t stream_id,
+                                        size_t num_assoc_content);
+
+int spdylay_associated_content_unregister (spdylay_session *session, uint32_t stream_id,
+                                           size_t num_assoc_content);
 
 #ifdef __cplusplus
 }

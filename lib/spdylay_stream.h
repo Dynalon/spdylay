@@ -109,6 +109,20 @@ typedef struct {
   /* Keep track of the number of bytes received without
      WINDOW_UPDATE. */
   int32_t recv_window_size;
+
+  /**
+   * A counter for outstanding associated content streams. The SPDY3 spec
+   * requires that all associated content streams are announced (=have
+   * at least send its opening SYN_STREAM frame) before any content of
+   * the original request stream is transfered and before the original
+   * request stream is closed. Use this counter to indicate the number of
+   * extra streams (transfering the associated content)  that are to be pushed
+   * for a request stream. The request stream will be held open and data
+   * frames will be held back until all
+   * SYN_STREAM frames from the associated streams are send.
+   */
+  size_t assoc_content;
+
 } spdylay_stream;
 
 void spdylay_stream_init(spdylay_stream *stream, int32_t stream_id,

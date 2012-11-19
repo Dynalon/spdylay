@@ -121,6 +121,7 @@ public:
                            int32_t stream_id,
                            time_t last_modified,
                            off_t file_length,
+                           size_t assoc_content,
                            spdylay_data_provider *data_prd);
 
   int submit_response(const std::string& status,
