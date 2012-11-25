@@ -21,6 +21,9 @@ namespace spdylay
 
 	bool AssociatedContent::HasContent (std::string url)
 	{
+	  if(!AssociatedContent::enabled)
+	    return false;
+
 		bool has_content = ContentMap.find (url) != ContentMap.end ();
 		if (verbose && has_content) {
 			cout << "found associated content for " << url << endl;
@@ -37,6 +40,8 @@ namespace spdylay
 	}
 	void AssociatedContent::Fill ()
 	{
+	  if(!AssociatedContent::enabled)
+	    return;
 		// add our sample associated contents
 
 		// index.html
@@ -49,6 +54,7 @@ namespace spdylay
 	// static initializations
 	map<string, vector<string> > AssociatedContent::ContentMap = map<string, vector<string> > ();
 	bool AssociatedContent::verbose = false;
+	bool AssociatedContent::enabled = false;
 
 }
 

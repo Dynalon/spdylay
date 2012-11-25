@@ -39,6 +39,7 @@
 
 #include "spdylay_ssl.h"
 #include "SpdyServer.h"
+#include "AssocContent.h"
 
 namespace spdylay {
 
@@ -76,6 +77,7 @@ void print_help(std::ostream& out)
       << "                       transmission of frames and name/value pairs.\n"
       << "    -3, --spdy3        Only use SPDY/3.\n"
       << "    -h, --help         Print this help.\n"
+      << "    -a, --assoc        Enable pushing of associated content\n"
       << std::endl;
 }
 } // namespace
@@ -91,10 +93,11 @@ int main(int argc, char **argv)
       {"verbose", no_argument, 0, 'v' },
       {"spdy3", no_argument, 0, '3' },
       {"verify-client", no_argument, 0, 'V' },
+      {"assoc", no_argument, 0, 'a' },
       {0, 0, 0, 0 }
     };
     int option_index = 0;
-    int c = getopt_long(argc, argv, "DVd:hv3", long_options, &option_index);
+    int c = getopt_long(argc, argv, "DVd:hv3a", long_options, &option_index);
     if(c == -1) {
       break;
     }
@@ -119,6 +122,10 @@ int main(int argc, char **argv)
       break;
     case '?':
       exit(EXIT_FAILURE);
+    case 'a':
+      AssociatedContent::enabled = true;
+      std::cout << "Pushing of associated content is ENABLED" << std::endl;
+      break;
     default:
       break;
     }

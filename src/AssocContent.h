@@ -23,7 +23,7 @@ namespace spdylay
 
 	public:
 
-
+	  static bool enabled;
 		static bool verbose;
 		static bool HasContent (std::string url);
 		static void Fill ();
