@@ -1412,10 +1412,11 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
         // and all other streams are associated content.
         if (stream->stream_id > 1 && stream->stream_id % 2 == 0) {
           spdylay_stream * request_stream = spdylay_session_get_stream(session, 1);
-          if (request_stream) {
+          if (request_stream && request_stream->assoc_content > 0) {
             spdylay_associated_content_unregister(session, 1, 1);
             // all associated streams completed, shutdown the request stream
             if (request_stream->assoc_content <= 0) {
+              spdylay_submit_rst_stream(session, 1, 0);
               spdylay_stream_shutdown(request_stream, SPDYLAY_SHUT_WR);
               spdylay_session_close_stream_if_shut_rdwr(session, request_stream);
             }

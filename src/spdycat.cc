@@ -187,11 +187,7 @@ struct SpdySession {
   }
   bool all_requests_processed() const
   {
-    bool all_req_complete = complete == reqvec.size();
-    // TODO check if outstanding server-push exists
-    if (true) {
-    	return false;
-    }
+    return complete == reqvec.size();
   }
   void update_hostport()
   {
@@ -540,7 +536,7 @@ int communicate(const std::string& host, uint16_t port,
 
   bool ok = true;
   timeval tv1, tv2;
-  while(!sc.finish() && true) {
+  while(!sc.finish()) {
     if(config.timeout != -1) {
       gettimeofday(&tv1, 0);
     }
