@@ -284,6 +284,7 @@ void on_data_chunk_recv_callback
           break;
         }
         if(!config.null_out) {
+          std::cout << "Received requested content: " << std::endl << std::endl;
           std::cout.write(reinterpret_cast<const char*>(out), outlen);
         }
         update_html_parser(spdySession, req, out, outlen, 0);
@@ -298,9 +299,10 @@ void on_data_chunk_recv_callback
     }
   } else {
 	  // associated content
-      if(!config.null_out) {
-        std::cout.write(reinterpret_cast<const char*>(data), len);
-      }
+    if(!config.null_out) {
+      std::cout << "Received pushed content: " << std::endl << std::endl;
+      std::cout.write(reinterpret_cast<const char*>(data), len);
+    }
   }
 }
 
