@@ -1407,6 +1407,20 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
       if(stream) {
         spdylay_stream_shutdown(stream, SPDYLAY_SHUT_WR);
         spdylay_session_close_stream_if_shut_rdwr(session, stream);
+
+        // HACK TODO: we assume here that a stream with id=1 is the main request stream
+        // and all other streams are associated content.
+        if (stream->stream_id > 1 && stream->stream_id % 2 == 0) {
+          spdylay_stream * request_stream = spdylay_session_get_stream(session, 1);
+          if (request_stream) {
+            spdylay_associated_content_unregister(session, 1, 1);
+            // all associated streams completed, shutdown the request stream
+            if (request_stream->assoc_content <= 0) {
+              spdylay_stream_shutdown(request_stream, SPDYLAY_SHUT_WR);
+              spdylay_session_close_stream_if_shut_rdwr(session, request_stream);
+            }
+          }
+        }
       }
     }
     /* If session is closed or RST_STREAM was queued, we won't send
