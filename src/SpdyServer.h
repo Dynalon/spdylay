@@ -40,8 +40,6 @@
 
 #include <spdylay/spdylay.h>
 
-#include "AssocContent.h"
-
 namespace spdylay {
 
 struct Config {
@@ -119,20 +117,14 @@ public:
 
   int submit_file_response(const std::string& status,
                            int32_t stream_id,
+                           size_t assoc_content,
                            time_t last_modified,
                            off_t file_length,
-                           size_t assoc_content,
                            spdylay_data_provider *data_prd);
 
   int submit_response(const std::string& status,
                       int32_t stream_id,
                       spdylay_data_provider *data_prd);
-
-  int submit_associated_content_syn(int32_t associated_stream_id,
-  		                                        time_t last_modified, off_t file_length);
-
-  int submit_associated_content(int32_t stream_id, int32_t associated_stream_id, off_t file_length, spdylay_data_provider *data_prd);
-
 
   int submit_response
   (const std::string& status,
@@ -146,13 +138,11 @@ public:
   int64_t session_id() const;
   spdylay_session *session_;
 private:
-
   int fd_;
   SSL* ssl_;
   uint16_t version_;
   int64_t session_id_;
   bool want_write_;
-
   std::map<int32_t, Request*> id2req_;
 };
 
