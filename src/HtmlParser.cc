@@ -78,6 +78,12 @@ void start_element_func
       std::string uri = uri::joinUri(parser_data->base_uri, src_attr);
       parser_data->links.push_back(uri);
     }
+  } else if(util::strieq(reinterpret_cast<const char*>(name), "script")) {
+    const char *src_attr = get_attr(attrs, "src");
+    if(src_attr) {
+      std::string uri = uri::joinUri(parser_data->base_uri, src_attr);
+      parser_data->links.push_back(uri);
+    }
   }
 }
 } // namespace
