@@ -48,6 +48,9 @@ namespace spdylay
 		vector<string> index_vec =  vector<string> ();
 		index_vec.push_back ("styles.css");
 		index_vec.push_back ("script.js");
+		index_vec.push_back ("jquery-1.8.3.min.js");
+		index_vec.push_back ("moon.jpg");
+		index_vec.push_back ("kit_logo.png");
 
 		ContentMap.insert(pair<string, vector<string> > ("/index.html", index_vec));
 	}
