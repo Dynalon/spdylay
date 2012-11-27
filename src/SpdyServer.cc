@@ -302,7 +302,7 @@ int SpdyEventHandler::submit_file_response(const std::string& status,
   if (assoc_content > 0) {
     char buffer[10];
     sprintf(buffer, "%d", assoc_content);
-    std::cout << "buffer is: " << buffer << std::endl;
+    //std::cout << "buffer is: " << buffer << std::endl;
     // the server wants to push additional content to the client
     // specify the number of content objects that will be pushed
     // to the client in an additional header
@@ -552,7 +552,7 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
       if (AssociatedContent::HasContent(url)) {
         assoc_content = AssociatedContent::ContentMap[url].size();
         // register the content with the stream - this will prevent the request stream
-        // from beeing closed if there are pending requests
+        // from beeing closed on the server side if there are pending requests
         spdylay_associated_content_register(hd->session_, req->stream_id, assoc_content);
       }
 

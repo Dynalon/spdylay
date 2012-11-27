@@ -121,9 +121,18 @@ int spdylay_submit_server_push(spdylay_session *session, int32_t assoc_stream_id
 {
 	// server pushed content always has to use unidirectional streams
 	uint8_t flags = SPDYLAY_CTRL_FLAG_UNIDIRECTIONAL;
-	// we push associated content at lowest priority to assure the origina request stream response
+	// 1st approach: we push associated content at lowest priority to assure
+	// the original request stream response
 	// arrives earlier than the associated content.
-	uint8_t pri = spdylay_session_get_pri_lowest(session);
+	// This violates the SPDY specs, since the SYN_STREAM frames of the associated
+	// content HAVE TO arrive before the DATA frames of the primary request stream
+	//uint8_t pri = spdylay_session_get_pri_lowest(session);
+
+	// 2nd approach: we use the same priority for the assoc streams as for the
+	// primary request stream. We then get the SPDY spec enforced order, but this
+	// is highly implementation specific and only works because of the order
+	// that the frames are taken from the queue
+	uint8_t pri = 3;
 
 	return spdylay_submit_syn_stream_shared(session, flags, assoc_stream_id, pri, nv, data_prd, stream_user_data);
 }
