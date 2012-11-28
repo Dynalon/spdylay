@@ -1,0 +1,12 @@
+The htdocs folder have to be specially crafted:
+
+* Only subfolder from htdocs are served
+* Every subfolder MUST have a index.html
+* All other files in a subfolder are associated content
+* A file assoc.txt MUST exist that holds relative paths for
+  each file that is to be delivered as associated content
+  I.e:
+  ./script.js
+  ./moon.jpg
+
+  etc.

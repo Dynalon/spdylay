@@ -25,6 +25,7 @@ namespace spdylay
 
 	  static bool enabled;
 		static bool verbose;
+		static Config config;
 		static bool HasContent (std::string url);
 		static void Fill ();
 		static map<string, vector<string> > ContentMap;
@@ -35,7 +36,7 @@ namespace spdylay
 		// associated content always belong to a single request,
 		// not necessarily a stream
 		spdylay_session *session;
-
+		static void addHtdocsDir (char* fullpath, char* basepath);
 
 	};
 

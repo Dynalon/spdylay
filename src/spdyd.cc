@@ -149,6 +149,8 @@ int main(int argc, char **argv)
   if(config.htdocs.empty()) {
     config.htdocs = "./";
   }
+  AssociatedContent::config = config;
+
   struct sigaction act;
   memset(&act, 0, sizeof(struct sigaction));
   act.sa_handler = SIG_IGN;

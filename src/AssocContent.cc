@@ -6,6 +6,13 @@
  */
 #include "AssocContent.h"
 
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+#include <sstream>
+#include <fstream>
+
 #include <spdylay/spdylay.h>
 #include <iostream>
 
@@ -40,24 +47,57 @@ namespace spdylay
 	}
 	void AssociatedContent::Fill ()
 	{
-	  if(!AssociatedContent::enabled)
-	    return;
-		// add our sample associated contents
+    if(!AssociatedContent::enabled)
+      return;
 
-		// index.html
-		vector<string> index_vec =  vector<string> ();
-		index_vec.push_back ("styles.css");
-		index_vec.push_back ("script.js");
-		index_vec.push_back ("jquery-1.8.3.min.js");
-		index_vec.push_back ("moon.jpg");
-		index_vec.push_back ("kit_logo.png");
+    DIR * dirp = opendir(config.htdocs.c_str ());
+    dirent *dp;
 
-		ContentMap.insert(pair<string, vector<string> > ("/index.html", index_vec));
+    while ((dp = readdir(dirp)) != NULL) {
+      // skip ./.. dirs
+      if (strcmp(dp->d_name, "..") == 0 || strcmp(dp->d_name, ".") == 0) continue;
+
+      // concatenate to full path (+2 because of the trailing / and 0 termination)
+      size_t new_size = config.htdocs.length() + strlen(dp->d_name) + 1;
+      char *fullpath = (char*) malloc(new_size);
+      sprintf(fullpath, "%s%s", config.htdocs.c_str (), dp->d_name);
+
+      // check if it is directory
+      struct stat buff;
+      lstat(fullpath, &buff);
+      if (S_ISDIR(buff.st_mode)) {
+        // read in all associated content for that dir
+        addHtdocsDir (fullpath, dp->d_name);
+      }
+    }
+    closedir(dirp);
+	}
+	void AssociatedContent::addHtdocsDir (char* fullpath, char* basepath)
+	{
+	  // append assoc.txt
+	  char * assoc_file = (char *) malloc (strlen(fullpath) + 11);
+	  sprintf(assoc_file, "%s/assoc.txt", fullpath);
+
+	  char *index_relpath = (char *) malloc (strlen(basepath) + 13);
+	  sprintf(index_relpath, "/%s/index.html", basepath);
+
+	  vector<string> index_vec =  vector<string> ();
+	  std::ifstream input(assoc_file);
+
+	  for(std::string line; getline(input, line); ) {
+
+	    char * assoc_content = (char *) malloc (line.length() + strlen(basepath) + 2);
+	    sprintf(assoc_content, "%s/%s", basepath, line.c_str());
+	    index_vec.push_back (assoc_content);
+	    cout << assoc_content << endl;
+	  }
+		ContentMap.insert(pair<string, vector<string> > (index_relpath, index_vec));
 	}
 	// static initializations
 	map<string, vector<string> > AssociatedContent::ContentMap = map<string, vector<string> > ();
 	bool AssociatedContent::verbose = false;
 	bool AssociatedContent::enabled = false;
+	Config AssociatedContent::config;
 
 }
 
