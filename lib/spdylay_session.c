@@ -1232,13 +1232,23 @@ spdylay_outbound_item* spdylay_session_pop_next_ob_item
       spdylay_pq_pop(&session->ob_pq);
       return item;
     } else {
+      // there are SYN_STREAMs and Non-SYN_STREAM frames in the outbound queue
       spdylay_outbound_item *item, *syn_stream_item;
       item = spdylay_pq_top(&session->ob_pq);
       syn_stream_item = spdylay_pq_top(&session->ob_ss_pq);
+
+      // HACK TODO SYN_STREAMs have always priority, no matter what their according
+      // stream priority is. We do this so associated content SYN_STREAMs are sent before any DATA frames
+      // of the original request stream
+      spdylay_pq_pop(&session->ob_ss_pq);
+      return syn_stream_item;
+      // END HACK
+
       if(spdylay_session_is_outgoing_concurrent_streams_max(session) ||
          item->pri < syn_stream_item->pri ||
          (item->pri == syn_stream_item->pri &&
           item->seq < syn_stream_item->seq)) {
+
         spdylay_pq_pop(&session->ob_pq);
         return item;
       } else {
@@ -1301,6 +1311,15 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
             return r;
           }
         }
+        // a SYN_STREAM for an associated content
+        if (stream->stream_id > 1 && stream->stream_id % 2 == 0) {
+          // TODO do not hardcore stream no. 1
+          spdylay_stream *request_stream = spdylay_session_get_stream(session, 1);
+          if (request_stream && request_stream->assoc_content > 0) {
+            // unregister associated content
+            spdylay_associated_content_unregister(session, 1, 1);
+          }
+        }
       }
       break;
     }
@@ -1333,6 +1352,7 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
           } else {
         	  flags = SPDYLAY_DATA_FLAG_FIN;
           }
+          flags = SPDYLAY_DATA_FLAG_FIN;
           r = spdylay_submit_data(session, frame->syn_reply.stream_id,
                                   flags, data_prd);
           if(r != 0) {
@@ -1402,6 +1422,7 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
          session->aob.framebuflen-SPDYLAY_HEAD_LEN, session->user_data);
     }
     if(data_frame->eof && (data_frame->flags & SPDYLAY_DATA_FLAG_FIN)) {
+      // last data frame of a stream, this data frame will close the stream
       spdylay_stream *stream =
         spdylay_session_get_stream(session, data_frame->stream_id);
       if(stream) {
@@ -1410,18 +1431,14 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
 
         // HACK TODO: we assume here that a stream with id=1 is the main request stream
         // and all other streams are associated content.
-        if (stream->stream_id > 1 && stream->stream_id % 2 == 0) {
+        /*if (stream->stream_id > 1 && stream->stream_id % 2 == 0) {
           spdylay_stream * request_stream = spdylay_session_get_stream(session, 1);
-          if (request_stream && request_stream->assoc_content > 0) {
-            spdylay_associated_content_unregister(session, 1, 1);
-            // all associated streams completed, shutdown the request stream
-            if (request_stream->assoc_content <= 0) {
-              spdylay_submit_rst_stream(session, 1, 0);
-              spdylay_stream_shutdown(request_stream, SPDYLAY_SHUT_WR);
-              spdylay_session_close_stream_if_shut_rdwr(session, request_stream);
-            }
+          if (request_stream->assoc_content <= 0 && request_stream->state == SPDYLAY_STREAM_OPENED) {
+            spdylay_submit_rst_stream(session, 1, 0);
+            spdylay_stream_shutdown(request_stream, SPDYLAY_SHUT_WR);
+            spdylay_session_close_stream_if_shut_rdwr(session, request_stream);
           }
-        }
+        }*/
       }
     }
     /* If session is closed or RST_STREAM was queued, we won't send
