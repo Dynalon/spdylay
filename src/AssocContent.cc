@@ -45,6 +45,7 @@ namespace spdylay
 		return ContentMap[url];
 
 	}
+	// build the static associated content table
 	void AssociatedContent::Fill ()
 	{
     if(!AssociatedContent::enabled)
@@ -72,6 +73,10 @@ namespace spdylay
     }
     closedir(dirp);
 	}
+
+	// adds a directory within htdocs
+	// each directory must have a assoc.txt describing the associated content
+	// for index.html
 	void AssociatedContent::addHtdocsDir (char* fullpath, char* basepath)
 	{
 	  // append assoc.txt

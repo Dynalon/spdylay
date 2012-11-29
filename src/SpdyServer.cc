@@ -471,6 +471,8 @@ void prepare_status_response(Request *req, SpdyEventHandler *hd,
     headers.push_back(std::make_pair("content-type",
                                      "text/html; charset=UTF-8"));
 
+    // only needed for debugging / log analysis: we send the number of
+    // associated content resources in the original requests header
     if(assoc_content > 0) {
     	char * uint_buf = new char[12];
     	sprintf(uint_buf, "%d", assoc_content);
@@ -598,10 +600,25 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
           std::string date_str = util::http_date(time(0));
           std::string content_length = util::to_str(assoc_buf.st_size);
           std::string last_modified_str;
+
+          std::string path = "/" + assoc_url;
+
+          // find the :host header
+          std::string host;
+          for(vector<pair<string, string> >::iterator it = req->headers.begin(); it != req->headers.end (); it++) {
+            if ((*it).first == ":host") {
+              host = (*it).second;
+            }
+          }
+
           const char *nv[] = { ":status", "200 OK", ":version", "HTTP/1.1",
               "server", SPDYD_SERVER.c_str(), "content-length",
               content_length.c_str(), "cache-control", "max-age=3600", "date",
-              date_str.c_str(), 0, 0, 0 };
+              date_str.c_str(),
+              ":path", path.c_str(),
+              ":host", host.c_str(),
+              ":scheme", "https",
+              0,0, 0 };
 
           spdylay_submit_server_push(hd->session_, req->stream_id, nv,
               &assoc_data_prd, NULL);
