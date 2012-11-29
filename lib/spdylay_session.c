@@ -1311,15 +1311,6 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
             return r;
           }
         }
-        // a SYN_STREAM for an associated content
-        if (stream->stream_id > 1 && stream->stream_id % 2 == 0) {
-          // TODO do not hardcore stream no. 1
-          spdylay_stream *request_stream = spdylay_session_get_stream(session, 1);
-          if (request_stream && request_stream->assoc_content > 0) {
-            // unregister associated content
-            spdylay_associated_content_unregister(session, 1, 1);
-          }
-        }
       }
       break;
     }
@@ -1338,20 +1329,7 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
             (spdylay_data_provider*)item->aux_data;
           int r;
 
-
-          // HACK TODO: request streams that have associated content
-          // are NEVER closed from the server side. Instead we rely
-          // on the client to send RST_STREAM as soon as all
-          // associated content streams are received, by sending the
-          // X-Associated-Content: <num_streams> header on the first
-          // request.
           int flags;
-          // do not close the stream if we have associated content pending
-          /*if (stream->assoc_content > 0) {
-        	  flags = 0;
-          } else {
-        	  flags = SPDYLAY_DATA_FLAG_FIN;
-          } */
           flags = SPDYLAY_DATA_FLAG_FIN;
           r = spdylay_submit_data(session, frame->syn_reply.stream_id,
                                   flags, data_prd);
