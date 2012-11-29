@@ -1347,11 +1347,11 @@ static int spdylay_session_after_frame_sent(spdylay_session *session)
           // request.
           int flags;
           // do not close the stream if we have associated content pending
-          if (stream->assoc_content > 0) {
+          /*if (stream->assoc_content > 0) {
         	  flags = 0;
           } else {
         	  flags = SPDYLAY_DATA_FLAG_FIN;
-          }
+          } */
           flags = SPDYLAY_DATA_FLAG_FIN;
           r = spdylay_submit_data(session, frame->syn_reply.stream_id,
                                   flags, data_prd);
