@@ -558,7 +558,8 @@ void prepare_response(Request *req, SpdyEventHandler *hd)
         spdylay_associated_content_register(hd->session_, req->stream_id, assoc_content);
       }
 
-      if(last_mod_found && buf.st_mtime <= last_mod) {
+      // HACK TODO sending 304 not changed disabled temporarily
+      if(last_mod_found && buf.st_mtime <= last_mod && false) {
         prepare_status_response(req, hd, assoc_content, STATUS_304);
       } else {
         hd->submit_file_response(STATUS_200, req->stream_id, assoc_content, buf.st_mtime,
