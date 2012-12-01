@@ -58,7 +58,7 @@ namespace spdylay
       // skip ./.. dirs
       if (strcmp(dp->d_name, "..") == 0 || strcmp(dp->d_name, ".") == 0) continue;
 
-      // concatenate to full path (+2 because of the trailing / and 0 termination)
+      // concatenate to full path
       size_t new_size = config.htdocs.length() + strlen(dp->d_name) + 1;
       char *fullpath = (char*) malloc(new_size);
       sprintf(fullpath, "%s%s", config.htdocs.c_str (), dp->d_name);
@@ -68,7 +68,7 @@ namespace spdylay
       lstat(fullpath, &buff);
       if (S_ISDIR(buff.st_mode)) {
         // read in all associated content for that dir
-        addHtdocsDir (fullpath, dp->d_name);
+        addHtdocsDir (std::string(fullpath), std::string(dp->d_name));
       }
     }
     closedir(dirp);
@@ -77,26 +77,43 @@ namespace spdylay
 	// adds a directory within htdocs
 	// each directory must have a assoc.txt describing the associated content
 	// for index.html
-	void AssociatedContent::addHtdocsDir (char* fullpath, char* basepath)
+	void AssociatedContent::addHtdocsDir (string fullpath, string basepath)
 	{
-	  // append assoc.txt
-	  char * assoc_file = (char *) malloc (strlen(fullpath) + 11);
-	  sprintf(assoc_file, "%s/assoc.txt", fullpath);
+	  // find all .map files
+    DIR * dirp = opendir(fullpath.c_str());
+    dirent *dp;
+    while ((dp = readdir(dirp)) != NULL) {
+      // skip ./.. dirs
+      if (strcmp(dp->d_name, "..") == 0 || strcmp(dp->d_name, ".") == 0)
+        continue;
 
-	  char *index_relpath = (char *) malloc (strlen(basepath) + 13);
-	  sprintf(index_relpath, "/%s/index.html", basepath);
+      std::string s(dp->d_name);
+      if (s.length() < 4) continue;
+      string end = s.substr(s.length() - 4,4);
 
-	  vector<string> index_vec =  vector<string> ();
-	  std::ifstream input(assoc_file);
+      if (end == ".map") {
+        string htmlfile = s.substr(0, s.length () - 4);
+        string htmlpath = "/" + basepath + "/" + htmlfile;
 
-	  for(std::string line; getline(input, line); ) {
+        string mappath = fullpath + "/" + s;
 
-	    char * assoc_content = (char *) malloc (line.length() + strlen(basepath) + 2);
-	    sprintf(assoc_content, "%s/%s", basepath, line.c_str());
-	    index_vec.push_back (assoc_content);
-	    cout << assoc_content << endl;
-	  }
-		ContentMap.insert(pair<string, vector<string> > (index_relpath, index_vec));
+        vector<string> index_vec =  vector<string> ();
+        std::ifstream input(mappath.c_str());
+
+        // push each content as associated content into our map
+        for(std::string line; getline(input, line); ) {
+          // combine to full path
+          string assoc_content_path = basepath + "/" + line;
+          index_vec.push_back(assoc_content_path);
+          //cout << assoc_content_path << endl;
+        }
+        input.close();
+
+        cout << htmlpath << endl;
+        ContentMap.insert(pair<string, vector<string> > (htmlpath, index_vec));
+      }
+    }
+    closedir (dirp);
 	}
 	// static initializations
 	map<string, vector<string> > AssociatedContent::ContentMap = map<string, vector<string> > ();

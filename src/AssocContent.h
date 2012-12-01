@@ -36,7 +36,7 @@ namespace spdylay
 		// associated content always belong to a single request,
 		// not necessarily a stream
 		spdylay_session *session;
-		static void addHtdocsDir (char* fullpath, char* basepath);
+		static void addHtdocsDir (string fullpath, string basepath);
 
 	};
 
