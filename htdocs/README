@@ -1,12 +1,27 @@
 The htdocs folder have to be specially crafted:
 
 * Only subfolder from htdocs are served
-* Every subfolder MUST have a index.html
-* All other files in a subfolder are associated content
-* A file assoc.txt MUST exist that holds relative paths for
-  each file that is to be delivered as associated content
-  I.e:
-  ./script.js
-  ./moon.jpg
+* Command used for creating sample pages:
+
+	wget --page-requisites --convert-links --no-host-directories --cut-dirs=20 --directory-prefix=. $URI
+
+* All .html files within a subfolder MAY have a corresponding .html.map file
+* The .map file list the associated content for that particular .html file
+* No leading ./ or / are allowed in the .html.map file
+
+* Map files can be easily created with this command:
+
+* A file content.map MUST exist within each subfolder that enumerates 
+  EVERY non-html file in the subfolder
+
+  example content.map:
+  
+  00001 image1.jpg
+  00002 image2.jpg
 
   etc.
+
+* A content.map can be easily created with:
+
+	find ./* -printf "%f\n" -type f | grep -v ".htm" | nl -s" " -n rz
+
