@@ -423,6 +423,8 @@ ssize_t file_read_callback
   } else {
     if(r == 0) {
       *eof = 1;
+      // close the filedescriptor to avoid leaking open files
+      close(fd);
     }
     return r;
   }
