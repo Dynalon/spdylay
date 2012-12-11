@@ -67,6 +67,7 @@ struct Config {
   bool verbose;
   bool get_assets;
   bool stat;
+  bool use_assoc_list;
   int spdy_version;
   // milliseconds
   int timeout;
@@ -79,6 +80,8 @@ struct Config {
            spdy_version(-1), timeout(-1), window_bits(-1)
   {}
 };
+
+Config config;
 
 struct RequestStat {
   timeval on_syn_stream_time;
@@ -125,9 +128,13 @@ struct Request {
     assert(rv == 0);
   }
 
-  void init_html_parser()
+  void init_html_parser(spdylay::Config config)
   {
-    html_parser = new HtmlParser(uri::construct(us));
+    if (config.use_assoc_list)
+      html_parser = new HtmlParser(uri::construct(us), true, "../htdocs/");
+    else
+      html_parser = new HtmlParser(uri::construct(us), false, "../htdocs/");
+
   }
 
   int update_html_parser(const uint8_t *data, size_t len, int fin)
@@ -222,7 +229,7 @@ struct SpdySession {
   }
 };
 
-Config config;
+
 extern bool ssl_debug;
 
 void submit_request(Spdylay& sc, const std::string& hostport,
@@ -246,12 +253,15 @@ void update_html_parser(SpdySession *spdySession, Request *req,
   for(size_t i = 0; i < req->html_parser->get_links().size(); ++i) {
     const std::string& uri = req->html_parser->get_links()[i];
     uri::UriStruct us;
-    if(uri::parse(us, uri) &&
+    bool parse_success = uri::parse(us, uri);
+    if(parse_success &&
        req->us.protocol == us.protocol && req->us.host == us.host &&
        req->us.port == us.port) {
       spdySession->add_request(us, req->level+1);
       submit_request(*spdySession->sc, spdySession->hostport, config.headers,
                      spdySession->reqvec.back());
+    } else {
+      std::cout << "failed to parse uri " << uri << std::endl;
     }
   }
   req->html_parser->clear_links();
@@ -364,9 +374,9 @@ void check_response_header
       req->init_inflater();
     }
   }
-  if(config.get_assets && req->level == 0) {
+  if((config.get_assets || config.use_assoc_list) && req->level == 0) {
     if(!req->html_parser) {
-      req->init_html_parser();
+      req->init_html_parser(config);
     }
   }
 }
@@ -676,6 +686,8 @@ void print_help(std::ostream& out)
       << "                       The file must be in PEM format.\n"
       << "    --key=<KEY>        Use the client private key file. The file\n"
       << "                       must be in PEM format.\n"
+      << "    -p                 Use .map files from htdocs folder instead of\n"
+      << "                       parsing the html content\n"
       << std::endl;
 }
 
@@ -697,10 +709,11 @@ int main(int argc, char **argv)
       {"key", required_argument, &flag, 2 },
       {"help", no_argument, 0, 'h' },
       {"header", required_argument, 0, 'H' },
+      {"use-static-filelist", no_argument, 0, 'p' },
       {0, 0, 0, 0 }
     };
     int option_index = 0;
-    int c = getopt_long(argc, argv, "OanhH:v23st:w:", long_options,
+    int c = getopt_long(argc, argv, "OanhH:v23pst:w:", long_options,
                         &option_index);
     if(c == -1) {
       break;
@@ -770,6 +783,9 @@ int main(int argc, char **argv)
                 << "the binary was not compiled with libxml2."
                 << std::endl;
 #endif // !HAVE_LIBXML2
+      break;
+    case 'p':
+      config.use_assoc_list = true;
       break;
     case 's':
       config.stat = true;

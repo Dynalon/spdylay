@@ -84,20 +84,18 @@ namespace spdylay
     dirent *dp;
     while ((dp = readdir(dirp)) != NULL) {
       // skip ./.. dirs
-      if (strcmp(dp->d_name, "..") == 0 || strcmp(dp->d_name, ".") == 0)
-        continue;
+      std::string filename(dp->d_name);
 
-      std::string s(dp->d_name);
-      if (s.length() < 4) continue;
-      string end = s.substr(s.length() - 4,4);
+      if (filename.length() < 4) continue;
+      string end = filename.substr(filename.length() - 4,4);
 
       if (end == ".map") {
-        string htmlfile = s.substr(0, s.length () - 4);
+        string htmlfile = filename.substr(0, filename.length () - 4);
         string htmlpath = "/" + basepath + "/" + htmlfile;
 
-        string mappath = fullpath + "/" + s;
+        string mappath = fullpath + "/" + filename;
 
-        vector<string> index_vec =  vector<string> ();
+        vector<string> index_vec = vector<string> ();
         std::ifstream input(mappath.c_str());
 
         // push each content as associated content into our map
@@ -114,6 +112,10 @@ namespace spdylay
       }
     }
     closedir (dirp);
+
+    // TODO contentmap file parsing and creation
+    // (for ID mapping)
+
 	}
 	// static initializations
 	map<string, vector<string> > AssociatedContent::ContentMap = map<string, vector<string> > ();

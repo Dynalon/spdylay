@@ -27,17 +27,90 @@
 #include "util.h"
 #include "uri.h"
 
+#include <iostream>
+#include "dirent.h"
+#include <sys/stat.h>
+#include <fstream>
+#include <vector>
+#include <map>
+
 namespace spdylay {
 
 ParserData::ParserData(const std::string& base_uri)
   : base_uri(base_uri)
 {}
 
-HtmlParser::HtmlParser(const std::string& base_uri)
+HtmlParser::HtmlParser(const std::string& base_uri, bool use_assoc_file, std::string htdocspath)
   : base_uri_(base_uri),
     parser_ctx_(0),
     parser_data_(base_uri)
-{}
+{
+  this->use_assoc_file = use_assoc_file;
+
+  // build the static list of associated content we need to fetch manually
+  if (use_assoc_file) {
+
+    // for every folder in htdocs
+    DIR * dirp = opendir(htdocspath.c_str());
+    dirent *dp;
+
+    while ((dp = readdir(dirp)) != NULL) {
+      // skip ./.. dirs
+      std::string filename(dp->d_name);
+      if (filename == ".." || filename == ".")
+        continue;
+
+
+      std::string filepath = htdocspath + "/" + filename;
+      struct stat buff;
+      lstat(filepath.c_str(), &buff);
+      if (S_ISDIR(buff.st_mode)) {
+        // read in all associated content for that dir
+        addHtdocsDir (htdocspath, filename);
+      }
+    }
+    closedir(dirp);
+  }
+}
+
+void HtmlParser::addHtdocsDir (std::string htdocspath, std::string dirname)
+{
+  std::string dirpath (htdocspath + "/" + dirname);
+  DIR * dirp = opendir(dirpath.c_str());
+  dirent *dp;
+
+  while ((dp = readdir(dirp)) != NULL) {
+    // skip ./.. dirs
+    std::string filename(dp->d_name);
+
+    if (filename.length() < 4) continue;
+    std::string end = filename.substr(filename.length() - 4,4);
+
+
+    if (end == ".map") {
+      std::string htmlfile = filename.substr(0, filename.length () - 4);
+      std::string htmlpath = "/" + dirname + "/" + htmlfile;
+      std::string mappath = htdocspath + dirname + "/" + filename;
+
+      std::ifstream input(mappath.c_str());
+
+      // push each content as associated content into our map
+      std::vector<std::string> index_vec = std::vector<std::string> ();
+      for (std::string line; getline(input, line);) {
+        // combine to full path
+        uri::UriStruct us;
+        uri::parse(us, this->base_uri_);
+        std::string assoc_content_url = "https://" + us.host + ":8080" + "/" + dirname + "/" + line;
+        index_vec.push_back(assoc_content_url);
+        //std::cout << assoc_content_url << std::endl;
+      }
+      input.close();
+      this->pushed_links_.insert(std::pair<std::string, std::vector<std::string> >(htmlpath, index_vec));
+    }
+  }
+  closedir(dirp);
+
+}
 
 HtmlParser::~HtmlParser()
 {
@@ -159,14 +232,43 @@ int HtmlParser::parse_chunk_internal(const char *chunk, size_t size,
   }
 }
 
-const std::vector<std::string>& HtmlParser::get_links() const
+std::vector<std::string>& HtmlParser::get_links()
 {
-  return parser_data_.links;
+  if (!this->use_assoc_file)
+    return parser_data_.links;
+
+  uri::UriStruct us;
+
+  uri::parse(us, this->base_uri_);
+  std::string path( us.dir  + us.file);
+
+  std::vector<std::string> *ret = new std::vector<std::string> ();
+
+  if (us.file.length() > 5) {
+    if (us.file.substr(us.file.length()-5, 5) == ".html") {
+        std::vector<std::string>::iterator it = pushed_links_[path].begin();
+        for(; it != pushed_links_[path].end (); it++)
+          ret->push_back(*it);
+        // delete the link entry
+        // TODO HACK this make another request to the same resource impossible
+        last_path = path;
+
+    }
+  }
+
+  return *ret;
+
 }
 
 void HtmlParser::clear_links()
 {
-  parser_data_.links.clear();
+  if (!this->use_assoc_file) {
+    parser_data_.links.clear();
+  } else {
+    this->pushed_links_[last_path].clear();
+    // do not provide any links until a chunk is received again
+  }
+
 }
 
 } // namespace spdylay

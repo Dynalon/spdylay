@@ -28,6 +28,8 @@
 #include "spdylay_config.h"
 
 #include <vector>
+#include <map>
+
 #include <string>
 
 #ifdef HAVE_LIBXML2
@@ -44,17 +46,23 @@ struct ParserData {
 
 class HtmlParser {
 public:
-  HtmlParser(const std::string& base_uri);
+  HtmlParser(const std::string& base_uri, bool use_assoc_file, std::string htdocspath);
   ~HtmlParser();
   int parse_chunk(const char *chunk, size_t size, int fin);
-  const std::vector<std::string>& get_links() const;
+  std::vector<std::string>& get_links();
   void clear_links();
 private:
+  bool use_assoc_file;
+  std::string last_path;
+
+  void addHtdocsDir (std::string htdocspath, std::string foldername);
   int parse_chunk_internal(const char *chunk, size_t size, int fin);
 
   std::string base_uri_;
   htmlParserCtxtPtr parser_ctx_;
   ParserData parser_data_;
+
+  std::map<std::string, std::vector<std::string> > pushed_links_;
 };
 
 } // namespace spdylay
@@ -71,6 +79,7 @@ public:
   const std::vector<std::string>& get_links() const { return links_; }
   void clear_links() {}
 private:
+
   std::vector<std::string> links_;
 };
 
