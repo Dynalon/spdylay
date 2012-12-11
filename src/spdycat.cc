@@ -82,11 +82,15 @@ struct Config {
 };
 
 Config config;
+bool global_started = false;
+timeval global_start_time;
+timeval global_end_time;
 
 struct RequestStat {
   timeval on_syn_stream_time;
   timeval on_syn_reply_time;
   timeval on_complete_time;
+
   RequestStat()
   {
     on_syn_stream_time.tv_sec = -1;
@@ -239,6 +243,7 @@ void submit_request(Spdylay& sc, const std::string& hostport,
   uri::UriStruct& us = req->us;
   std::string path = us.dir+us.file+us.query;
   int r = sc.submit_request(hostport, path, headers, 3, req);
+
   assert(r == 0);
 }
 
@@ -399,7 +404,6 @@ void on_ctrl_recv_callback2
   if(config.verbose) {
     on_ctrl_recv_callback(session, type, frame, user_data);
   }
-
 }
 
 void on_stream_close_callback
@@ -600,15 +604,42 @@ int communicate(const std::string& host, uint16_t port,
   if(config.stat) {
     print_stats(spdySession);
   }
+  std::cout << "Total network time: " << time_delta(global_end_time, global_start_time) << "ms" << std::endl;
   return ok ? 0 : -1;
+}
+
+
+
+ssize_t send_callback2(spdylay_session *session,
+                      const uint8_t *data, size_t len, int flags,
+                      void *user_data) {
+
+  // record the time the first frame is sent
+  if (!global_started) {
+    global_start_time.tv_sec = -1;
+    global_start_time.tv_usec = -1;
+    record_time (&global_start_time);
+    global_started = true;
+  }
+  return send_callback(session, data, len, flags, user_data);
+
+}
+ssize_t recv_callback2(spdylay_session *session,
+                      uint8_t *data, size_t len, int flags, void *user_data)
+{
+  // whill hold the time of the last frame received
+  record_time (&global_end_time);
+  return recv_callback(session, data, len, flags, user_data);
+
 }
 
 int run(char **uris, int n)
 {
   spdylay_session_callbacks callbacks;
   memset(&callbacks, 0, sizeof(spdylay_session_callbacks));
-  callbacks.send_callback = send_callback;
-  callbacks.recv_callback = recv_callback;
+  callbacks.send_callback = send_callback2;
+  callbacks.recv_callback = recv_callback2;
+
   callbacks.on_stream_close_callback = on_stream_close_callback;
   callbacks.on_ctrl_recv_callback = on_ctrl_recv_callback2;
   callbacks.on_ctrl_send_callback = on_ctrl_send_callback2;
