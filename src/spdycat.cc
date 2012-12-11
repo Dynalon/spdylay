@@ -24,6 +24,7 @@
  */
 #include "spdylay_config.h"
 
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -58,6 +59,7 @@
 #include "uri.h"
 #include "HtmlParser.h"
 #include "util.h"
+#include "ClientCache.h"
 
 namespace spdylay {
 
@@ -242,7 +244,18 @@ void submit_request(Spdylay& sc, const std::string& hostport,
 {
   uri::UriStruct& us = req->us;
   std::string path = us.dir+us.file+us.query;
+
+  // if the requested resource is already in the cache, do not perform the submit
+  if (ClientCache::HasFreshCopy(path)) {
+    std::cout << "Not fetching resource " << path << " since we have a fresh copy in cache!" << std::endl;
+    return;
+  }
   int r = sc.submit_request(hostport, path, headers, 3, req);
+
+  // add the resource to our cache
+  CacheEntry ce = CacheEntry ();
+  ce.path = path;
+  ClientCache::Add(ce);
 
   assert(r == 0);
 }
@@ -390,20 +403,49 @@ void on_ctrl_recv_callback2
 (spdylay_session *session, spdylay_frame_type type, spdylay_frame *frame,
  void *user_data)
 {
+
+
   if(type == SPDYLAY_SYN_REPLY) {
     Request *req = (Request*)spdylay_session_get_stream_user_data
       (session, frame->syn_reply.stream_id);
     assert(req);
     req->record_syn_reply_time();
   } else if (type == SPDYLAY_SYN_STREAM) {
-	  std::cout << "RECEIVED ASSOCIATED CONTENT" << std::endl;
-	  // associated content stream
-	  // TODO put the content into the internal client cache
+	  std::cout << "RECEIVED ASSOCIATED CONTENT: " << std::endl;
+
+	  // put the content into the internal client cache
+	  // HACK TODO we do not really push any data in the cash, just the path
+	  // to keep track of what resources are already available
+
+	  // find the :path header
+    std::string path;
+    char** nv = frame->syn_stream.nv;
+     for(int i = 0; nv[i]; i += 2) {
+        //printf("%s: \n", nv[i]);
+        if (strncmp(nv[i], ":path:", 5) == 0)
+          path = std::string(nv[i+1]);
+     }
+     if (path == "") {
+       std::cout << "WARNING did not find a valid :path in the SYN_STREAM" << std::endl;
+     }
+
+     // if the pushed content is already in the cache, refuse it and send a RST_STREAM
+     if (ClientCache::HasFreshCopy(path)) {
+       std::cout << "Already have a fresh copy of pushed resource, sending RST_STREAM" << std::endl;
+       spdylay_submit_rst_stream(session, frame->syn_stream.stream_id, SPDYLAY_REFUSED_STREAM);
+       return;
+     } else {
+
+       CacheEntry ce = CacheEntry ();
+       ce.path = path;
+       ClientCache::Add(ce);
+     }
   }
   check_response_header(session, type, frame, user_data);
   if(config.verbose) {
     on_ctrl_recv_callback(session, type, frame, user_data);
   }
+
 }
 
 void on_stream_close_callback
@@ -719,6 +761,7 @@ void print_help(std::ostream& out)
       << "                       must be in PEM format.\n"
       << "    -p                 Use .map files from htdocs folder instead of\n"
       << "                       parsing the html content\n"
+      << "    -c                 enable client cache\n"
       << std::endl;
 }
 
@@ -741,10 +784,11 @@ int main(int argc, char **argv)
       {"help", no_argument, 0, 'h' },
       {"header", required_argument, 0, 'H' },
       {"use-static-filelist", no_argument, 0, 'p' },
+      {"cache", no_argument, 0, 'c' },
       {0, 0, 0, 0 }
     };
     int option_index = 0;
-    int c = getopt_long(argc, argv, "OanhH:v23pst:w:", long_options,
+    int c = getopt_long(argc, argv, "OanhH:v23pcst:w:", long_options,
                         &option_index);
     if(c == -1) {
       break;
@@ -817,6 +861,9 @@ int main(int argc, char **argv)
       break;
     case 'p':
       config.use_assoc_list = true;
+      break;
+    case 'c':
+      ClientCache::enabled = true;
       break;
     case 's':
       config.stat = true;

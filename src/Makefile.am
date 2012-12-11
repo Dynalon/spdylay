@@ -63,6 +63,7 @@ SPDY_SERVER_OBJECTS = SpdyServer.cc
 SPDY_SERVER_HFILES = SpdyServer.h
 
 spdycat_SOURCES = ${HELPER_OBJECTS} ${HELPER_HFILES} spdycat.cc \
+	ClientCache.h ClientCache.cc \
 	${HTML_PARSER_OBJECTS} ${HTML_PARSER_HFILES}
 
 spdyd_SOURCES = ${HELPER_OBJECTS} ${HELPER_HFILES} \
