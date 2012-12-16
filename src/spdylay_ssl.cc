@@ -384,6 +384,7 @@ int make_non_block(int fd)
 
 int set_tcp_nodelay(int fd)
 {
+  printf("SETTING TCP_NODELAY!");
   int val = 1;
   return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
 }
