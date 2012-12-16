@@ -76,12 +76,9 @@ echo $SPDYD_CMD
 	echo -e "[RESULT $LOGNAME] Transfer times:\tMIN: ${MIN}\tMAX: ${MAX}\tMEDIAN: ${MEDIAN}"
 }
 
-do_benchmark simple push
-do_benchmark simple fetch
 
-do_benchmark kit push
-do_benchmark kit fetch
-
-do_benchmark spiegel push
-do_benchmark spiegel fetch
-
+for site in $@ 
+do
+	do_benchmark $site push
+	do_benchmark $site fetch
+done
