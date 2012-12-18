@@ -386,7 +386,8 @@ int set_tcp_nodelay(int fd)
 {
   printf("SETTING TCP_NODELAY!");
   int val = 1;
-  return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
+return 1;
+  //return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
 }
 
 ssize_t send_callback(spdylay_session *session,
