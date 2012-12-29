@@ -3,8 +3,8 @@
 SPDYCAT="./spdycat"
 SPDYCAT_BASE_PARAM="-3 -n"
 
-NUM_RUNS=10
-HALF_RUNS=5
+NUM_RUNS=30
+HALF_RUNS=15
 SSH_REMOTE="tb15"
 
 REMOTE_PATH="/home/s_doerr/spdylay/src/"
@@ -57,14 +57,14 @@ function do_benchmark {
 	sleep 2
 	# for the control log, sniff data via tcpdump
 	#TCPDUMP_CLIENT="tcpdump -s 0 -i eth0 -w logs/$LOGNAME.client.pcap"
-	TCPDUMP_CLIENT="dumpcap -q -i eth0 -w logs/$LOGNAME.client.pcap"
+	TCPDUMP_CLIENT="dumpcap -q -i br0 -w logs/$LOGNAME.client.pcap"
 	#TCPDUMP_SERVER="tcpdump -s 0 -i eth0 -w logs/server.pcap"
 	echo $TCPDUMP_SERVER
 	# client sniffing
 	screen -m -d -S sniffer $TCPDUMP_CLIENT 
 	# server sniffing
 	#ssh -t $SSH_REMOTE "cd /home/s_doerr/spdylay/src/; screen -d -S tcpdump -m $TCPDUMP_SERVER"
-	ssh -t $SSH_REMOTE "cd /home/s_doerr/spdylay/src/; screen -m -d -S sniffer dumpcap -q -i eth0 -w logs/server.pcap; sleep 2"
+	ssh -t $SSH_REMOTE "cd /home/s_doerr/spdylay/src/; screen -m -d -S sniffer dumpcap -q -i br0 -w logs/server.pcap; sleep 2"
 
 	# one control call with verbose output that we can examine
 	$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS -v $URL > logs/$LOGNAME.client.log
@@ -106,6 +106,6 @@ do
 	do_benchmark $site fetch
 done
 	
-# copy the whole logs folder to i72siska
-ssh -t s_doerr@i72siska "rm -rf /home/s_doerr/logs/"
-scp -r logs s_doerr@i72siska:
+# copy the whole logs folder to i08
+ssh -t s_drr@i08fs1.ira.uka.de "rm -rf /home/s_drr/logs/"
+scp -r logs s_drr@i08fs1.ira.uka.de:
