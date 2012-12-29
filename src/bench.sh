@@ -27,9 +27,9 @@ echo "## LOCAL AND REMOTE REPO UP TO DATE"
 echo "## DELETING PREVIOUS COLLECTED LOG DATA"
 rm -rf logs/
 mkdir logs
+ssh -t $SSH_REMOTE "cd /home/s_doerr/spdylay/src/; rm -rf logs; mkdir logs"
 
 echo "## START BENCHMARK WITH $NUM_RUNS RUNS"
-
 
 function do_benchmark {
 
@@ -37,17 +37,16 @@ function do_benchmark {
 	URL="https://10.0.0.15:8080/$WEBSITE/index.html"
 	if [ "$2" == "push" ]; then
 		echo "[PUSH] STARTING $WEBSITE BENCHMARK"
-		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh -a; sleep 2"
+		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh -a > logs/server.log; sleep 2"
 		SPDYCAT_ARGS=""
 		LOGNAME="$WEBSITE-push"
 	else
 		echo "[FETCH] STARTING $WEBSITE BENCHMARK"
-		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh > server-fetch.log; sleep 2"
+		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh > logs/server.log; sleep 2"
 		SPDYCAT_ARGS="-p"
 		LOGNAME="$WEBSITE-fetch"
 	fi
 
-echo $SPDYD_CMD
 	# start the server on the remote end via screen
 	ssh -t $SSH_REMOTE $SPDYD_CMD 
 	
@@ -55,33 +54,58 @@ echo $SPDYD_CMD
 	$SPDYCAT $SPDYCAT_BASE_PARM $SPDYCAT_ARGS $URL > /dev/null
 	$SPDYCAT $SPDYCAT_BASE_PARM $SPDYCAT_ARGS $URL > /dev/null
 
+	sleep 2
+	# for the control log, sniff data via tcpdump
+	#TCPDUMP_CLIENT="tcpdump -s 0 -i eth0 -w logs/$LOGNAME.client.pcap"
+	TCPDUMP_CLIENT="dumpcap -q -i eth0 -w logs/$LOGNAME.client.pcap"
+	#TCPDUMP_SERVER="tcpdump -s 0 -i eth0 -w logs/server.pcap"
+	echo $TCPDUMP_SERVER
+	# client sniffing
+	screen -m -d -S sniffer $TCPDUMP_CLIENT 
+	# server sniffing
+	#ssh -t $SSH_REMOTE "cd /home/s_doerr/spdylay/src/; screen -d -S tcpdump -m $TCPDUMP_SERVER"
+	ssh -t $SSH_REMOTE "cd /home/s_doerr/spdylay/src/; screen -m -d -S sniffer dumpcap -q -i eth0 -w logs/server.pcap; sleep 2"
+
 	# one control call with verbose output that we can examine
-	$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS -v $URL > logs/$LOGNAME.control.log
+	$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS -v $URL > logs/$LOGNAME.client.log
+
+	sleep 1
+	# end the sniffing for the control log
+	# client
+	killall -TERM dumpcap
+	ssh -t $SSH_REMOTE "killall -TERM dumpcap; sleep 1; screen -S sniffer -X quit; sleep 2"
+	screen -S sniffer -X quit
+
+	# copy the logs from the server to the client in the background
+	scp tb15:/home/s_doerr/spdylay/src/logs/server.pcap /home/s_doerr/spdylay/src/logs/$LOGNAME.server.pcap &
+	scp tb15:/home/s_doerr/spdylay/src/logs/server.log /home/s_doerr/spdylay/src/logs/$LOGNAME.server.log &
+
 
 	# the actual benchmarking runs
 	for i in $(seq 1 1 $NUM_RUNS)
 	do
-		echo "RUN $i: \n" >> logs/$LOGNAME.log
-		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL >> logs/$LOGNAME.log
+		echo "RUN $i: \n" >> logs/$LOGNAME.full.log
+		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL >> logs/$LOGNAME.full.log
 	done
 
 	# kill the screen session (and thus the server) on the remote side
 	ssh $SSH_REMOTE 'screen -S spdyd -X quit; sleep 2;' > /dev/null
 
 	# print out some statistical data
-	MEDIAN=`cat logs/$LOGNAME.log|grep Total|sort|head -n $HALF_RUNS |tail -n 1|cut -f2 -d':'`
-	MIN=`cat logs/$LOGNAME.log|grep Total|sort|head -n 1|cut -f2 -d':'`
-	MAX=`cat logs/$LOGNAME.log|grep Total|sort|tail -n 1|cut -f2 -d':'`
+	MEDIAN=`cat logs/$LOGNAME.full.log|grep Total|sort|head -n $HALF_RUNS |tail -n 1|cut -f2 -d':'`
+	MIN=`cat logs/$LOGNAME.full.log|grep Total|sort|head -n 1|cut -f2 -d':'`
+	MAX=`cat logs/$LOGNAME.full.log|grep Total|sort|tail -n 1|cut -f2 -d':'`
 
 	echo -e "[RESULT $LOGNAME] Transfer times:\tMIN: ${MIN}\tMAX: ${MAX}\tMEDIAN: ${MEDIAN}"
 }
 
-do_benchmark simple push
-do_benchmark simple fetch
 
-do_benchmark kit push
-do_benchmark kit fetch
-
-do_benchmark spiegel push
-do_benchmark spiegel fetch
-
+for site in $@ 
+do
+	do_benchmark $site push
+	do_benchmark $site fetch
+done
+	
+# copy the whole logs folder to i72siska
+ssh -t s_doerr@i72siska "rm -rf /home/s_doerr/logs/"
+scp -r logs s_doerr@i72siska:
