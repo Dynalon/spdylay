@@ -77,6 +77,7 @@ void print_help(std::ostream& out)
       << "                       transmission of frames and name/value pairs.\n"
       << "    -3, --spdy3        Only use SPDY/3.\n"
       << "    -h, --help         Print this help.\n"
+      << "    -N, --no-nagle     Disable Nagle's algorithm on the socket\n"
       << "    -a, --assoc        Enable pushing of associated content\n"
       << std::endl;
 }
@@ -94,6 +95,7 @@ int main(int argc, char **argv)
       {"spdy3", no_argument, 0, '3' },
       {"verify-client", no_argument, 0, 'V' },
       {"assoc", no_argument, 0, 'a' },
+      {"no-nagle", no_argument, 0, 'N' },
       {0, 0, 0, 0 }
     };
     int option_index = 0;
@@ -125,6 +127,10 @@ int main(int argc, char **argv)
     case 'a':
       AssociatedContent::enabled = true;
       std::cout << "Pushing of associated content is ENABLED" << std::endl;
+      break;
+    case 'N':
+
+      config.disable_nagle = true;
       break;
     default:
       break;

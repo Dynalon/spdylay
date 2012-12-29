@@ -54,6 +54,7 @@ struct Config {
   void *data_ptr;
   bool spdy3_only;
   bool verify_client;
+  bool disable_nagle;
   Config();
 };
 
@@ -68,6 +69,7 @@ public:
   virtual bool want_write() = 0;
   virtual int fd() const = 0;
   virtual bool finish() = 0;
+
   const Config* config() const
   {
     return config_;

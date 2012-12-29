@@ -876,8 +876,12 @@ public:
     int cfd;
     while((cfd = accept(fd_, 0, 0)) == -1 && errno == EINTR);
     if(cfd != -1) {
+      int val = 0;
+      if (config()->disable_nagle) {
+        val = set_tcp_nodelay(cfd);
+      }
       if(make_non_block(cfd) == -1 ||
-         set_tcp_nodelay(cfd) == -1) {
+         val == -1) {
         close(cfd);
       } else {
         add_next_handler(sessions, cfd);
