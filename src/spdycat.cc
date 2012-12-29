@@ -76,10 +76,11 @@ struct Config {
   std::string certfile;
   std::string keyfile;
   int window_bits;
+  bool disable_nagle;
   std::map<std::string,std::string> headers;
   Config():null_out(false), remote_name(false), verbose(false),
            get_assets(false), stat(false),
-           spdy_version(-1), timeout(-1), window_bits(-1)
+           spdy_version(-1), timeout(-1), window_bits(-1), disable_nagle(false)
   {}
 };
 
@@ -514,7 +515,11 @@ int communicate(const std::string& host, uint16_t port,
               << std::endl;
     return -1;
   }
-  set_tcp_nodelay(fd);
+  if (config.disable_nagle) {
+    cout << "Disabling Naggle's Algorithm for socket" << endl;
+    set_tcp_nodelay(fd);
+  }
+
   SSL_CTX *ssl_ctx;
   ssl_ctx = SSL_CTX_new(TLSv1_client_method());
   if(!ssl_ctx) {
@@ -759,6 +764,7 @@ void print_help(std::ostream& out)
       << "                       The file must be in PEM format.\n"
       << "    --key=<KEY>        Use the client private key file. The file\n"
       << "                       must be in PEM format.\n"
+      << "    -N, --no-nagle     Dsiable Nagle's algorithm for socket\n"
       << "    -p                 Use .map files from htdocs folder instead of\n"
       << "                       parsing the html content\n"
       << "    -c                 enable client cache\n"
@@ -785,10 +791,11 @@ int main(int argc, char **argv)
       {"header", required_argument, 0, 'H' },
       {"use-static-filelist", no_argument, 0, 'p' },
       {"cache", no_argument, 0, 'c' },
+      {"no-nagle", no_argument, 0, 'N' },
       {0, 0, 0, 0 }
     };
     int option_index = 0;
-    int c = getopt_long(argc, argv, "OanhH:v23pcst:w:", long_options,
+    int c = getopt_long(argc, argv, "OanNhH:v23pcst:w:", long_options,
                         &option_index);
     if(c == -1) {
       break;
@@ -862,6 +869,8 @@ int main(int argc, char **argv)
     case 'p':
       config.use_assoc_list = true;
       break;
+    case 'N':
+      config.disable_nagle = true;
     case 'c':
       ClientCache::enabled = true;
       break;
