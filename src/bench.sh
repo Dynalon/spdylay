@@ -1,9 +1,9 @@
 #!/bin/bash
 
 SPDYCAT="./spdycat"
-SPDYCAT_BASE_PARAM="-3 -n"
+SPDYCAT_BASE_PARAM="-v -3 -n"
 
-NUM_RUNS=4
+NUM_RUNS=30
 HALF_RUNS=`echo $NUM_RUNS | awk '{ half = $1/2; print half}'`
 SSH_REMOTE="tb15"
 
@@ -85,12 +85,14 @@ function do_benchmark {
 	for i in $(seq 1 1 $NUM_RUNS)
 	do
 		echo "RUN $i: \n" >> logs/$LOGNAME.full.log
-		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL >> logs/$LOGNAME.full.log
+		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL > logs/$LOGNAME.run$i.log
 	done
 
 	# kill the screen session (and thus the server) on the remote side
 	ssh $SSH_REMOTE 'screen -S spdyd -X quit; sleep 2;' > /dev/null
 
+	# concatenate all runs into large output
+	cat logs/$LOGNAME.run*.log > logs/$LOGNAME.full.log
 	# print out some statistical data
 	MEDIAN=`cat logs/$LOGNAME.full.log|grep Total|sort|head -n $HALF_RUNS |tail -n 1|cut -f2 -d':'`
 	MIN=`cat logs/$LOGNAME.full.log|grep Total|sort|head -n 1|cut -f2 -d':'`
