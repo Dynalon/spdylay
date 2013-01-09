@@ -384,10 +384,12 @@ int make_non_block(int fd)
 
 int set_tcp_nodelay(int fd)
 {
-
-    printf("Disabling Nagle's Algorithm\n");
     int val = 1;
-    return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
+    int ret;
+    ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
+    printf("DISABLING NAGLE'S ALGORITHM: ");
+    ret == 0 ? printf ("SUCCESS!\n") : printf ("FAILED!\n");
+    return ret;
 }
 
 ssize_t send_callback(spdylay_session *session,
