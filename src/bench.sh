@@ -85,7 +85,9 @@ function do_benchmark {
 	for i in $(seq 1 1 $NUM_RUNS)
 	do
 		echo "RUN $i: \n" >> logs/$LOGNAME.full.log
-		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL > logs/$LOGNAME.run$i.log
+		# uncomment to collect a log for each run
+		#$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL > logs/$LOGNAME.run$i.log
+		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL 
 	done
 
 	# kill the screen session (and thus the server) on the remote side
