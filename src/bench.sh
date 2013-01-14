@@ -3,7 +3,7 @@
 SPDYCAT="./spdycat"
 SPDYCAT_BASE_PARAM="-v -3 -n"
 
-NUM_RUNS=30
+NUM_RUNS=50
 HALF_RUNS=`echo $NUM_RUNS | awk '{ half = $1/2; print half}'`
 SSH_REMOTE="tb15"
 
@@ -37,12 +37,12 @@ function do_benchmark {
 	URL="https://10.0.0.15:8080/$WEBSITE/index.html"
 	if [ "$2" == "push" ]; then
 		echo "[PUSH] STARTING $WEBSITE BENCHMARK"
-		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh -a > logs/server.log; sleep 2"
+		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh -a --no-nagle > logs/server.log; sleep 2"
 		SPDYCAT_ARGS=""
 		LOGNAME="$WEBSITE-push"
 	else
 		echo "[FETCH] STARTING $WEBSITE BENCHMARK"
-		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh > logs/server.log; sleep 2"
+		SPDYD_CMD="cd /home/s_doerr/spdylay/src/; screen -m -d -S spdyd ./start_server.sh --no-nagle > logs/server.log; sleep 2"
 		SPDYCAT_ARGS="-p"
 		LOGNAME="$WEBSITE-fetch"
 	fi
@@ -85,9 +85,7 @@ function do_benchmark {
 	for i in $(seq 1 1 $NUM_RUNS)
 	do
 		echo "RUN $i: \n" >> logs/$LOGNAME.full.log
-		# uncomment to collect a log for each run
-		#$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL > logs/$LOGNAME.run$i.log
-		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL 
+		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL > logs/$LOGNAME.run$i.log
 	done
 
 	# kill the screen session (and thus the server) on the remote side
