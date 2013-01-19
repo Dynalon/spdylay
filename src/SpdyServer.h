@@ -110,7 +110,7 @@ public:
   virtual bool finish();
 
   uint16_t version() const;
-
+  
   ssize_t send_data(const uint8_t *data, size_t len, int flags);
 
   ssize_t recv_data(uint8_t *data, size_t len, int flags);
@@ -145,6 +145,7 @@ private:
   uint16_t version_;
   int64_t session_id_;
   bool want_write_;
+  uint32_t sent_bytes;
   std::map<int32_t, Request*> id2req_;
 };
 

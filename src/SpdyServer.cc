@@ -59,6 +59,7 @@ const std::string STATUS_400 = "400 Bad Request";
 const std::string STATUS_404 = "404 Not Found";
 const std::string DEFAULT_HTML = "index.html";
 const std::string SPDYD_SERVER = "spdyd spdylay/" SPDYLAY_VERSION;
+
 } // namespace
 
 Config::Config(): verbose(false), daemon(false), port(0), data_ptr(0),
@@ -181,7 +182,7 @@ SpdyEventHandler::SpdyEventHandler(const Config* config,
                                    int64_t session_id)
   : EventHandler(config),
     fd_(fd), ssl_(ssl), version_(version), session_id_(session_id),
-    want_write_(false)
+    want_write_(false),sent_bytes(0)
 {
   int r;
   r = spdylay_session_server_new(&session_, version, callbacks, this);
@@ -247,6 +248,11 @@ bool SpdyEventHandler::finish()
 
 ssize_t SpdyEventHandler::send_data(const uint8_t *data, size_t len, int flags)
 {
+  // allows to anaylse output bytes on the app layer
+  std::cout << "[SSL_SEND_BUFFER_LENGTH]: " << len << std::endl;
+  // output all bytes sent so far (interesting for congestion analysis) 
+  sent_bytes += len;
+  std::cout << "[SSL_SEND_BUFFER_TOTAL]: " << sent_bytes << std::endl;
   ssize_t r;
   ERR_clear_error();
   r = SSL_write(ssl_, data, len);
@@ -301,7 +307,7 @@ int SpdyEventHandler::submit_file_response(const std::string& status,
   }
   if (assoc_content > 0) {
     char buffer[10];
-    sprintf(buffer, "%d", assoc_content);
+    sprintf(buffer, "%lu", assoc_content);
     //std::cout << "buffer is: " << buffer << std::endl;
     // the server wants to push additional content to the client
     // specify the number of content objects that will be pushed
@@ -477,7 +483,7 @@ void prepare_status_response(Request *req, SpdyEventHandler *hd,
     // associated content resources in the original requests header
     if(assoc_content > 0) {
     	char * uint_buf = new char[12];
-    	sprintf(uint_buf, "%d", assoc_content);
+    	sprintf(uint_buf, "%lu", assoc_content);
     	headers.push_back(std::make_pair("x-associated-content", uint_buf));
     }
     hd->submit_response(status, req->stream_id, headers, &data_prd);
@@ -883,6 +889,7 @@ public:
       if(make_non_block(cfd) == -1 ||
          val == -1) {
         close(cfd);
+	return -1;
       } else {
         add_next_handler(sessions, cfd);
       }
