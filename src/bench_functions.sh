@@ -157,3 +157,35 @@ function delete_previous_logs ()
 	print_msg "deleting logs on remote $SSH_REMOTE"
 	execute_remote "rm -rf logs; mkdir logs"
 }
+
+# limits our link and returns a string
+# representation of the link limits for use
+# in logfiles
+# example:
+#       set_link_speed eth0 256Kbit/s 6Mbit/s 20ms 20ms
+# 
+# will set the speed using dummynet and return 256_6_20_20
+function set_link_speed ()
+{
+        local _ULSPEED=$1
+        local _DLSPEED=$2
+        local _SENDDELAY=$3
+        local _RECVDELAY=$4
+
+        if [ $5 ]; then
+                local _DEV=$5
+        else
+                local _DEV="eth0"
+        fi
+
+        local _RES="$(sudo dummynet_setup.sh $_ULSPEED $_DLSPEED $_SENDDELAY $_RECVDELAY)"
+
+        # format the string, strip all but digits
+        local _RET=""
+        _RET="$(echo $_ULSPEED | tr -dc '[:digit:]')"
+        _RET="${_RET}_$(echo $_DLSPEED | tr -dc '[:digit:]')"
+        _RET="${_RET}_$(echo $_SENDDELAY | tr -dc '[:digit:]')"
+        _RET="${_RET}_$(echo $_RECVDELAY | tr -dc '[:digit:]')"
+                                                                                                                                         
+        echo $_RET
+}

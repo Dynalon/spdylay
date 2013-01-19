@@ -1,12 +1,19 @@
 #!/bin/bash
+
+NUM_RUNS=50
+SPEEDS="
+256KBit/s 6MBit/s 20ms 20ms;
+"
+
+#1024KBit/s 10MBit/s 20ms 20ms;
+#2MBit/s 2Mbit/s 100ms 100ms;
+
 #set -e
 #set -x
 VERBOSE=1
 SPDYCAT="./spdycat"
-SPDYCAT_BASE_PARAM="-v -3 -n"
-
-NUM_RUNS=4
-#50
+#SPDYCAT_BASE_PARAM="-v -3 -n --no-nagle"
+SPDYCAT_BASE_PARAM="-v -3 -n --no-nagle"
 SSH_REMOTE="tb15"
 SPDY_REMOTE="10.0.0.15:8080"
 CWD="/home/s_doerr/spdylay/src"
@@ -21,7 +28,7 @@ STDOUT="/dev/null"
 
 source bench_functions.sh
 
-update_from_git
+#update_from_git
 delete_previous_logs
 
 function do_benchmark {
@@ -39,6 +46,17 @@ function do_benchmark {
 		SPDYCAT_ARGS="-p"
 		LOGNAME="$WEBSITE-fetch"
 	fi
+
+	# see if we enable nagle or nodelay
+	if [ $NAGLE ]; then
+		print_msg "enabling Nagle's algorithm"
+		LOGNAME="${LOGNAME}_$3_nagle"
+	else
+		SPDYD_CMD="${SPDYD_CMD} --no-nagle"
+		print_msg "disabling Nagle's algorithm"
+		# append the speed and nagle status to logname	
+		LOGNAME="${LOGNAME}_$3_nodelay"
+	fi	
 
 	TCPDUMP_CLIENT="dumpcap -q -i $SNIFF_DEVICE -w logs/$LOGNAME.client.pcap"
 	TCPDUMP_SERVER="dumpcap -q -i $SNIFF_DEVICE_REMOTE -w logs/$LOGNAME.server.pcap"
@@ -86,16 +104,34 @@ function do_benchmark {
 	MAX=`cat logs/$LOGNAME.full.log|grep Total|sort|tail -n 1|cut -f2 -d':'`
 	AVG=`cat logs/$LOGNAME.full.log|grep Total|awk '{sum+=$4} END { print sum/NR "ms"}'`
 
-	print_result "[RESULT $LOGNAME] Transfer times:\tMIN: ${MIN}\tMAX: ${MAX}\tMED: ${MEDIAN}\tAVG: ${AVG}"
+	print_result "[$LOGNAME]: \tMIN: ${MIN}\tMAX: ${MAX}\tMED: ${MEDIAN}\tAVG: ${AVG}"
 }
 
-for site in $@ 
+OLDIFS=$IFS
+IFS=$'\n'
+
+# foreach configured link speed
+for SPEED in $(echo $SPEEDS | tr ";" "\n")
 do
-	do_benchmark $site push
-	do_benchmark $site fetch
+	IFS=$OLDIFS
+	print_header "Start Run with link speed $SPEED"
+
+	_FMT_SPEED=$(set_link_speed $SPEED) || exit $?
+
+	for site in $@ 
+	do
+		NAGLE=1	
+		do_benchmark $site push "$_FMT_SPEED"
+		do_benchmark $site fetch "$_FMT_SPEED"
+
+		unset NAGLE
+		do_benchmark $site push "$_FMT_SPEED"
+		do_benchmark $site fetch "$_FMT_SPEED"
+	done
 done
 
-print_all_results	
+print_all_results
+print_all_results > "$BASE_LOGDIR/result.txt"
 # copy the whole logs folder to i08
 #ssh -t s_drr@i08fs1.ira.uka.de "rm -rf /home/s_drr/logs/"
 #scp -r logs s_drr@i08fs1.ira.uka.de:
