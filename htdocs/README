@@ -16,8 +16,8 @@ The htdocs folder have to be specially crafted:
 
   example content.map:
   
-  00001 image1.jpg
-  00002 image2.jpg
+  image1.jpg
+  image2.jpg
 
   etc.
 

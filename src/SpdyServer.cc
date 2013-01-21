@@ -62,7 +62,7 @@ const std::string SPDYD_SERVER = "spdyd spdylay/" SPDYLAY_VERSION;
 } // namespace
 
 Config::Config(): verbose(false), daemon(false), port(0), data_ptr(0),
-                  spdy3_only(false), verify_client(false)
+                  spdy3_only(false), verify_client(false), disable_nagle(false)
 {}
 
 Request::Request(int32_t stream_id)
