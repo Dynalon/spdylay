@@ -184,6 +184,8 @@ SpdyEventHandler::SpdyEventHandler(const Config* config,
     want_write_(false)
 {
   int r;
+  reset_timer();
+
   r = spdylay_session_server_new(&session_, version, callbacks, this);
   assert(r == 0);
   spdylay_settings_entry entry;
