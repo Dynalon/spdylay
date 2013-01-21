@@ -154,6 +154,9 @@ function delete_previous_logs ()
 	print_msg "deleting local logs"
 	rm -rf $BASE_LOGDIR
 	mkdir $BASE_LOGDIR
+	mkdir $BASE_LOGDIR/runs
+	mkdir $BASE_LOGDIR/tcpprobe
+	mkdir $BASE_LOGDIR/pcap
 	print_msg "deleting logs on remote $SSH_REMOTE"
 	execute_remote "rm -rf logs; mkdir logs"
 }

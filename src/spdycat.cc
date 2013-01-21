@@ -269,6 +269,9 @@ void update_html_parser(SpdySession *spdySession, Request *req,
   }
   req->update_html_parser(data, len, fin);
 
+  // the first time a data chunk is received, we add furhter
+  // content links to simulate that the client knows all content
+  // by the first data frame
   for(size_t i = 0; i < req->html_parser->get_links().size(); ++i) {
     const std::string& uri = req->html_parser->get_links()[i];
     uri::UriStruct us;
