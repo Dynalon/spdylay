@@ -2,19 +2,30 @@
 
 NUM_RUNS=50
 SPEEDS="
-256KBit/s 6MBit/s 20ms 20ms;
-6MBit/s 6MBit/s 100ms 100ms;
+512KBit/s 1MBit/s 20ms 20ms;
+512KBit/s 2MBit/s 20ms 20ms;
+512KBit/s 3MBit/s 20ms 20ms;
+512KBit/s 4MBit/s 20ms 20ms;
+512KBit/s 5MBit/s 20ms 20ms;
+512KBit/s 6MBit/s 20ms 20ms;
+512KBit/s 7MBit/s 20ms 20ms;
+512KBit/s 8MBit/s 20ms 20ms;
+512KBit/s 9MBit/s 20ms 20ms;
+512KBit/s 10MBit/s 20ms 20ms;
 "
 
+#256KBit/s 6MBit/s 20ms 20ms;
+
+#6MBit/s 6MBit/s 100ms 100ms;
 #1024KBit/s 10MBit/s 20ms 20ms;
 #2MBit/s 2Mbit/s 100ms 100ms;
 
 #set -e
 #set -x
-VERBOSE=1
+#VERBOSE=1
 SPDYCAT="./spdycat"
-SPDYCAT_BASE_PARAM="-v -3 -n --no-nagle"
-#SPDYCAT_BASE_PARAM="-v -3 -n"
+#SPDYCAT_BASE_PARAM="-v -3 -n --no-nagle"
+SPDYCAT_BASE_PARAM="-v -3 -n"
 SSH_REMOTE="tb15"
 SPDY_REMOTE="10.0.0.15:8080"
 CWD="/home/s_doerr/spdylay/src"

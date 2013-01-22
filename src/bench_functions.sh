@@ -51,7 +51,7 @@ function execute_remote ()
 	if [ $? -ne 0 ]; then
 		error "Failure on execute_remote($_CMD $_REMOTE $_RCWD)"
 	else
-		sleep 1
+		sleep 0.3
 		#echo $_RSTDOUT
 	fi
 }
@@ -69,7 +69,7 @@ function execute_bg()
 	_LCMD="screen -m -d -S $_HANDLE $_CMD > $_OUTPUT"
 	_STDOUT=`eval ${_LCMD}`
 	
-	sleep 1
+	sleep 0.3
 	#echo $_STDOUT
 }
 
@@ -111,7 +111,7 @@ function execute_remote_bg()
 	if [ $? -ne 0 ]; then
 		error "Failure on execute_remote($_CMD $_REMOTE $_HANDLE)"
 	else
-		sleep 1
+		sleep 0.3
 	#	echo $_RSTDOUT
 	fi
 }
