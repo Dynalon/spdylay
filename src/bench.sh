@@ -1,25 +1,11 @@
 #!/bin/bash
 
-NUM_RUNS=50
+NUM_RUNS=10
 
 
 SPEEDS="
-10MBit/s 10MBit/s 50ms 50ms;
-10MBit/s 10MBit/s 100ms 100ms;
-10MBit/s 10MBit/s 150ms 150ms;
 10MBit/s 10MBit/s 200ms 200ms;
-10MBit/s 10MBit/s 250ms 250ms;
-10MBit/s 10MBit/s 300ms 300ms;
-10MBit/s 10MBit/s 350ms 350ms;
-10MBit/s 10MBit/s 400ms 400ms;
-10MBit/s 10MBit/s 450ms 450ms;
 10MBit/s 10MBit/s 500ms 500ms;
-10MBit/s 10MBit/s 550ms 550ms;
-10MBit/s 10MBit/s 600ms 600ms;
-10MBit/s 10MBit/s 650ms 650ms;
-10MBit/s 10MBit/s 700ms 700ms;
-10MBit/s 10MBit/s 750ms 750ms;
-10MBit/s 10MBit/s 800ms 800ms;
 "
 
 #256KBit/s 6MBit/s 20ms 20ms;
@@ -114,22 +100,23 @@ function do_benchmark {
 	terminate_remote_bg "tcpdump_server"
 	terminate_remote_bg "tcpprobe"
 
-	# copy the logs from the server to the client in the background
-	scp tb15:$RCWD/logs/$LOGNAME.server.pcap $BASE_LOGDIR/pcap/$LOGNAME.server.pcap > $STDOUT
-	scp tb15:$RCWD/logs/$LOGNAME.tcpprobe.log $BASE_LOGDIR/tcpprobe/$LOGNAME.tcpprobe.log > $STDOUT
-	scp tb15:$RCWD/server.log $BASE_LOGDIR/$LOGNAME.server.log 
-
 	# the actual benchmarking runs
 	for i in $(seq 1 1 $NUM_RUNS)
 	do
 		$SPDYCAT $SPDYCAT_BASE_PARAM $SPDYCAT_ARGS $URL > $BASE_LOGDIR/runs/$LOGNAME.run$i.log
 	done
-
+	
 	# kill the screen session (and thus the server) on the remote side
 	terminate_remote_bg "spdyd"
 
+	# copy the logs from the server to the client in the background
+	scp tb15:$RCWD/logs/$LOGNAME.server.pcap $BASE_LOGDIR/pcap/$LOGNAME.server.pcap > $STDOUT
+	scp tb15:$RCWD/logs/$LOGNAME.tcpprobe.log $BASE_LOGDIR/tcpprobe/$LOGNAME.tcpprobe.log > $STDOUT
+	scp tb15:$RCWD/server.log $BASE_LOGDIR/$LOGNAME.server.log 
+	
 	# concatenate all runs into large output
 	cat $BASE_LOGDIR/runs/$LOGNAME.run*.log > $BASE_LOGDIR/$LOGNAME.full.log
+
 	# print out some statistical data
 	MEDIAN=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|head -n $HALF_RUNS |tail -n 1|cut -f2 -d':'`
 	MIN=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|head -n $HEAD|tail -n $TAIL|head -n 1|cut -f2 -d':'`
