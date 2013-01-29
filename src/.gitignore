@@ -1,3 +1,6 @@
 spdycat
 spdyd
 shrpx
+logs-*/
+logs*/
+result*.txt

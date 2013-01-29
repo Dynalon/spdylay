@@ -250,14 +250,16 @@ bool SpdyEventHandler::finish()
 
 ssize_t SpdyEventHandler::send_data(const uint8_t *data, size_t len, int flags)
 {
-  // allows to anaylse output bytes on the app layer
-  std::cout << "[SSL_SEND_BUFFER_LENGTH]: " << len << std::endl;
-  // output all bytes sent so far (interesting for congestion analysis) 
-  sent_bytes += len;
-  std::cout << "[SSL_SEND_BUFFER_TOTAL]: " << sent_bytes << std::endl;
   ssize_t r;
   ERR_clear_error();
   r = SSL_write(ssl_, data, len);
+  // allows to anaylse output bytes on the app layer
+  print_timer();
+  std::cout << " [SSL_SEND_BUFFER_LENGTH]: " << len << std::endl;
+  // output all bytes sent so far (interesting for congestion analysis) 
+  sent_bytes += len;
+  print_timer();
+  std::cout << " [SSL_SEND_BUFFER_TOTAL]: " << sent_bytes << std::endl;
   return r;
 }
 
@@ -687,6 +689,7 @@ void htdocs_on_request_recv_callback
 }
 
 namespace {
+static bool tmp_nagle;
 void hd_on_ctrl_send_callback
 (spdylay_session *session, spdylay_frame_type type, spdylay_frame *frame,
  void *user_data)
@@ -696,6 +699,16 @@ void hd_on_ctrl_send_callback
     print_session_id(hd->session_id());
     on_ctrl_send_callback(session, type, frame, user_data);
   }
+  // enable naggle when pushing the SYN_STREAM frames and nagle is explicity
+  // disabled since the SYN_STREAM frame may result in >100 individual tcp
+  // segments which is very bad for congestion control
+  if(!tmp_nagle && type == SPDYLAY_SYN_STREAM && hd->config()->disable_nagle
+      && AssociatedContent::enabled) {
+    tmp_nagle = true;
+    cout << "TEMP re-enabled Nagle" << endl;
+    set_tcp_disable_nodelay(hd->fd());
+  }
+
 }
 } // namespace
 
@@ -731,6 +744,12 @@ void hd_on_data_send_callback
   if(hd->config()->verbose) {
     print_session_id(hd->session_id());
     on_data_send_callback(session, flags, stream_id, length, user_data);
+  }
+  // re-disable nagle when requested upon sending of the first data frame
+  if(tmp_nagle && hd->config()->disable_nagle && AssociatedContent::enabled) {
+    cout << "RE-DISABLING NAGLE (setting nodelay" << endl;
+    set_tcp_nodelay(hd->fd());
+    tmp_nagle = false;
   }
 }
 } // namespace

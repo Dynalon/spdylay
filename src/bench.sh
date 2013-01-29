@@ -1,17 +1,25 @@
 #!/bin/bash
 
 NUM_RUNS=50
+
+
 SPEEDS="
-512KBit/s 1MBit/s 20ms 20ms;
-512KBit/s 2MBit/s 20ms 20ms;
-512KBit/s 3MBit/s 20ms 20ms;
-512KBit/s 4MBit/s 20ms 20ms;
-512KBit/s 5MBit/s 20ms 20ms;
-512KBit/s 6MBit/s 20ms 20ms;
-512KBit/s 7MBit/s 20ms 20ms;
-512KBit/s 8MBit/s 20ms 20ms;
-512KBit/s 9MBit/s 20ms 20ms;
-512KBit/s 10MBit/s 20ms 20ms;
+10MBit/s 10MBit/s 50ms 50ms;
+10MBit/s 10MBit/s 100ms 100ms;
+10MBit/s 10MBit/s 150ms 150ms;
+10MBit/s 10MBit/s 200ms 200ms;
+10MBit/s 10MBit/s 250ms 250ms;
+10MBit/s 10MBit/s 300ms 300ms;
+10MBit/s 10MBit/s 350ms 350ms;
+10MBit/s 10MBit/s 400ms 400ms;
+10MBit/s 10MBit/s 450ms 450ms;
+10MBit/s 10MBit/s 500ms 500ms;
+10MBit/s 10MBit/s 550ms 550ms;
+10MBit/s 10MBit/s 600ms 600ms;
+10MBit/s 10MBit/s 650ms 650ms;
+10MBit/s 10MBit/s 700ms 700ms;
+10MBit/s 10MBit/s 750ms 750ms;
+10MBit/s 10MBit/s 800ms 800ms;
 "
 
 #256KBit/s 6MBit/s 20ms 20ms;
@@ -23,6 +31,9 @@ SPEEDS="
 #set -e
 #set -x
 #VERBOSE=1
+CUT=$(echo $NUM_RUNS | awk '{ cut = int($1/100 * 5); print cut }')
+HEAD=$(echo $NUM_RUNS | awk "{ remainder = $NUM_RUNS - $CUT; print remainder}")
+TAIL=$(echo $NUM_RUNS | awk "{ remainder = $HEAD - $CUT; print remainder}")
 SPDYCAT="./spdycat"
 #SPDYCAT_BASE_PARAM="-v -3 -n --no-nagle"
 SPDYCAT_BASE_PARAM="-v -3 -n"
@@ -35,6 +46,7 @@ SNIFF_DEVICE="eth0"
 SNIFF_DEVICE_REMOTE="eth0"
 
 HALF_RUNS=`echo $NUM_RUNS | awk '{ half = $1/2; print half}'`
+# we cut the aboce 5% and lowest 5% before averaging
 
 STDOUT="/dev/null"
 
@@ -120,9 +132,9 @@ function do_benchmark {
 	cat $BASE_LOGDIR/runs/$LOGNAME.run*.log > $BASE_LOGDIR/$LOGNAME.full.log
 	# print out some statistical data
 	MEDIAN=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|head -n $HALF_RUNS |tail -n 1|cut -f2 -d':'`
-	MIN=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|head -n 1|cut -f2 -d':'`
-	MAX=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|tail -n 1|cut -f2 -d':'`
-	AVG=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|awk '{sum+=$4} END { print sum/NR "ms"}'`
+	MIN=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|head -n $HEAD|tail -n $TAIL|head -n 1|cut -f2 -d':'`
+	MAX=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|sort|head -n $HEAD|tail -n $TAIL|tail -n 1|cut -f2 -d':'`
+	AVG=`cat $BASE_LOGDIR/$LOGNAME.full.log|grep Total|head -n $HEAD|tail -n $TAIL|awk '{sum+=$4} END { print sum/NR "ms"}'`
 
 	print_result "[$LOGNAME]:\t\tMIN: ${MIN}\tMAX: ${MAX}\tMED: ${MEDIAN}\tAVG: ${AVG}"
 }

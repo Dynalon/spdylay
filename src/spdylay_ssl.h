@@ -80,6 +80,7 @@ int make_listen_socket(const std::string& host, uint16_t port, int family);
 int make_non_block(int fd);
 
 int set_tcp_nodelay(int fd);
+int set_tcp_disable_nodelay(int fd);
 
 ssize_t send_callback(spdylay_session *session,
                       const uint8_t *data, size_t len, int flags,

@@ -392,6 +392,15 @@ int set_tcp_nodelay(int fd)
     return ret;
 }
 
+int set_tcp_disable_nodelay(int fd)
+{
+	// undo set_tcp_nodelay, so basically re-enable nagle's
+	// algorithm on this socket
+	int val = 0;
+	int ret = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
+	return ret;
+}
+
 ssize_t send_callback(spdylay_session *session,
                       const uint8_t *data, size_t len, int flags,
                       void *user_data)
