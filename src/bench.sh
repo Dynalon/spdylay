@@ -1,10 +1,18 @@
 #!/bin/bash
 
-NUM_RUNS=10
+NUM_RUNS=50
 
 
 SPEEDS="
+10MBit/s 10MBit/s 50ms 50ms;
+10MBit/s 10MBit/s 100ms 100ms;
+10MBit/s 10MBit/s 150ms 150ms;
 10MBit/s 10MBit/s 200ms 200ms;
+10MBit/s 10MBit/s 250ms 250ms;
+10MBit/s 10MBit/s 300ms 300ms;
+10MBit/s 10MBit/s 350ms 350ms;
+10MBit/s 10MBit/s 400ms 400ms;
+10MBit/s 10MBit/s 450ms 450ms;
 10MBit/s 10MBit/s 500ms 500ms;
 "
 

@@ -182,11 +182,11 @@ function set_link_speed ()
         fi
 
 	_delay=$(echo $_SENDDELAY | sed s/ms//)
-        #local _RES="$(sudo dummynet_setup.sh $_ULSPEED $_DLSPEED $_SENDDELAY $_RECVDELAY)"
-        local _RES="sudo set_delay.sh eth0 ${_delay}"
-        local _RES="sudo set_delay.sh eth0 ${_delay}"
-	execute_remote "sudo set_delay.sh eth0 ${_delay}"
-	execute_remote "sudo set_delay.sh eth0 ${_delay}"
+        local _RES="$(sudo dummynet_setup.sh $_ULSPEED $_DLSPEED $_SENDDELAY $_RECVDELAY)"
+        #local _RES="sudo set_delay.sh eth0 ${_delay}"
+        #local _RES="sudo set_delay.sh eth0 ${_delay}"
+	#execute_remote "sudo set_delay.sh eth0 ${_delay}"
+	#execute_remote "sudo set_delay.sh eth0 ${_delay}"
 
         # format the string, strip all but digits
         local _RET=""
